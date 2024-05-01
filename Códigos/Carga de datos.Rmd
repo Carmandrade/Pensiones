@@ -1,0 +1,16 @@
+---
+title: "Datos"
+author: "C"
+date: "2024-05-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(readxl)
+```
+
+```{r}
+BD_Pensionados <- read_excel("C:/Users/carma/Desktop/UCR/2024/I semestre/Pensiones/Investigación/Pensiones/Datos/BD Pensionados.xlsx)
+View(BD_Pensionados)
+```
+
