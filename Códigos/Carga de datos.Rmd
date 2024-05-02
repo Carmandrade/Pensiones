@@ -5,12 +5,100 @@ date: "2024-05-01"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 library(readxl)
+library(tidyverse)
+```
+
+```{r, message=FALSE, warning=FALSE}
+fondoB <- read_excel("BD Pensionados.xlsx", sheet = "Fondo B", range = cell_cols(1:8))
+planilla<-read_excel("BD Pensionados.xlsx", sheet = "Fondo B", range = "K2", col_names = FALSE)
+planilla<- planilla$...1
+
+fondoB[] <- lapply(fondoB, function(x) if(is.character(x)) as.factor(x) else x)
+
+fondoB$`Rige de la Pensión`<- as.Date(fondoB$`Rige de la Pensión`)
+fondoB$FEC_NAC<- as.Date(fondoB$FEC_NAC)
+
+fondoB<- fondoB %>% 
+  mutate(`Rige de la Pensión` = if_else(is.na(`Rige de la Pensión`), 
+                                  FEC_NAC + years(65), 
+                                  `Rige de la Pensión`))
+summary(fondoB)
 ```
 
 ```{r}
-BD_Pensionados <- read_excel("C:/Users/carma/Desktop/UCR/2024/I semestre/Pensiones/Investigación/Pensiones/Datos/BD Pensionados.xlsx)
-View(BD_Pensionados)
+data_vejez <- fondoB[fondoB$COD_TIPO_PENSION == "Vejez", ]
+data_sucesion <- fondoB[fondoB$COD_TIPO_PENSION == "Sucesión", ]
+data_invalidez <- fondoB[fondoB$COD_TIPO_PENSION == "Invalidez", ]
 ```
+
+# Distribucion por sexo
+```{r}
+ggplot(fondoB, aes(x = SEXO, fill = COD_TIPO_PENSION)) + 
+  geom_bar(position = "dodge", stat = "count") +
+   geom_text(stat = 'count', aes(label = after_stat(count)), vjust = -0.5, position = position_dodge(width = 0.9), size = 3) +
+  labs(title = "Distribución por sexo",
+       x = "Sexo",
+       y = "Cantidad") +
+  scale_fill_brewer(palette = "Set1") +  
+  theme_minimal()
+```
+
+```{r}
+
+fondoB<- fondoB%>%
+  mutate(edad = interval(start = fondoB$FEC_NAC, end = today()) / years(1)) %>%
+  mutate(edad = round(edad, 2))
+
+fondoB<- fondoB%>%
+  mutate(antiguedad = interval(start = fondoB$`Rige de la Pensión`, end = today()) / years(1)) %>%
+  mutate(antiguedad = round(antiguedad, 2))
+
+fondoB<- fondoB%>%
+  mutate(EsperanzaVida = ifelse(SEXO == "F", 79.81 - edad,
+                         ifelse(SEXO == "M", 74.42 - edad, NA))) %>% 
+  mutate(EsperanzaVida = ifelse(EsperanzaVida<0, 1,EsperanzaVida))
+
+
+descripcion <- fondoB %>% select(SEXO, MONTO, edad, antiguedad)
+summary(descripcion)
+
+```
+
+# Posibles graficos para la edad
+
+```{r}
+ggplot(fondoB, aes(x = COD_TIPO_PENSION, y = edad, fill = COD_TIPO_PENSION)) +
+  geom_violin(trim = FALSE) +
+  labs(title = "Distribución etaria por tipo de pensión",
+       x = "Pensión",
+       y = "Edad") +
+  scale_fill_brewer(palette = "Set1") +
+  theme_minimal()
+```
+```{r}
+ggplot(fondoB, aes(x = edad, fill = COD_TIPO_PENSION)) +
+  geom_density(alpha = 0.6) +
+  labs(title = "Distribución etaria por tipo de pensión",
+       x = "Pensión",
+       y = "Edad") +
+  scale_fill_brewer(palette = "Set1") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(fondoB, aes(x = edad)) +
+  geom_histogram(bins = 20, fill = "skyblue", color = "black") +
+  facet_wrap(~ COD_TIPO_PENSION) +
+  labs(title = "Distribución etaria por tipo de pensión",
+       x = "Pensión",
+       y = "Edad") +
+  scale_fill_brewer(palette = "Set1") +
+  theme_minimal()
+```
+
+
+
+
 
