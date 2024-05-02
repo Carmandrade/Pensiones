@@ -134,7 +134,17 @@ summary(fondoB_Act$Edad)
 
 hist(fondoB_Act$Edad, breaks = 10, main = "Histograma de Edades", xlab = "Edad", ylab = "Frecuencia", col = "lightblue")
 
+edades_mujeres <- fondoB_Act$Edad[fondoB_Act$Sexo == "F"]
+edades_hombres <- fondoB_Act$Edad[fondoB_Act$Sexo == "M"]
+
+hist(edades_mujeres, breaks = 10, main = "Histograma de Edades por Sexo", xlab = "Edad", ylab = "Frecuencia", col = "darkblue", ylim = c(0, max(hist(edades_mujeres, breaks = 10)$counts, hist(edades_hombres, breaks = 10)$counts)))
+hist(edades_hombres, breaks = 10, add = TRUE, col = "hotpink", density = 20)
+legend("topright", legend = c("Mujeres", "Hombres"), fill = c("darkblue", "hotpink"))
+
+
 boxplot(fondoB_Act$Edad, main = "Diagrama de Caja de Edades", ylab = "Edad")
+
+boxplot(Edad ~ Sexo, data = fondoB_Act, main = "Diagrama de Caja de Edades por Sexo", ylab = "Edad", col = c("darkblue", "hotpink"))
 
 
 ```
@@ -157,7 +167,11 @@ fondoB_Act$Antiguedad <- apply(fondoB_Act[, -c(1:3)], 1, calcular_antiguedad)
 
 summary(fondoB_Act$Antiguedad)
 
-hist(fondoB_Act$Antiguedad, breaks = 10, main = "Histograma de Edades", xlab = "Antiguedad", ylab = "Frecuencia", col = "lightblue")
+hist(fondoB_Act$Antiguedad, breaks = 10, main = "Histograma de Antigüedad", xlab = "Antigüedad", ylab = "Frecuencia", col = "lightblue")
+
+frecuencias <- hist(fondoB_Act$Antiguedad, breaks = 10, plot = FALSE)$counts
+text(x = pretty(range(fondoB_Act$Antiguedad)), y = frecuencias, labels = frecuencias, pos = 3, col = "black")
+
 
 boxplot(fondoB_Act$Antiguedad, main = "Diagrama de Caja de Edades", ylab = "Antiguedad")
 
