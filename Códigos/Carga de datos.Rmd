@@ -117,7 +117,7 @@ for (col in 1:ncol(fondoB_Act)) {
   if (col <= 3){
   }
   else {
-    colnames(fondoB_Act)[col] <- nuevos_nombres[col]
+    colnames(fondoB_Act)[col] <- nuevos_nombres[col-3]
   }
 }
 
@@ -170,12 +170,9 @@ summary(fondoB_Act$Antiguedad)
 hist(fondoB_Act$Antiguedad, breaks = 10, main = "Histograma de Antigüedad", xlab = "Antigüedad", ylab = "Frecuencia", col = "lightblue")
 
 frecuencias <- hist(fondoB_Act$Antiguedad, breaks = 10, plot = FALSE)$counts
-text(x = pretty(range(fondoB_Act$Antiguedad)), y = frecuencias, labels = frecuencias, pos = 3, col = "black")
 
 
 boxplot(fondoB_Act$Antiguedad, main = "Diagrama de Caja de Edades", ylab = "Antiguedad")
-
-
 ```
 
 # Resumen estadístico de los datos demográficos 
