@@ -139,12 +139,29 @@ hist(fondoB_Act$Edad, breaks = 10, main = "Histograma de Edades", xlab = "Edad",
 ```
 
 ```{r}
-edades_mujeres <- fondoB$edad[fondoB_Act$Sexo == "F"]
-edades_hombres <- fondoB$edad[fondoB_Act$Sexo == "M"]
-hist(edades_mujeres, breaks = 10, main = "", xlab = "Edad", ylab = "Frecuencia", col = "#3A8DCC", ylim = c(0, max(hist(edades_mujeres, breaks = 10)$counts, hist(edades_hombres, breaks = 10)$counts)))
+funcion_graf_pensionados <- function(tipo_pension) {
+  fondo_T <- subset(fondoB, COD_TIPO_PENSION == tipo_pension)
+  
+  edades_mujeres <- fondo_T$edad[fondo_T$SEXO == "F"]
+  edades_hombres <- fondo_T$edad[fondo_T$SEXO == "M"]
+  
+  # Calculamos los límites para el histograma
+  min_edad <- min(min(edades_mujeres, na.rm = TRUE), min(edades_hombres, na.rm = TRUE))
+  max_edad <- max(max(edades_mujeres, na.rm = TRUE), max(edades_hombres, na.rm = TRUE))
+  breaks <- seq(min_edad, max_edad + 10, by = 10)
+  
+  # Creamos los histogramas
+  hist(edades_mujeres, breaks = breaks, main = "", xlab = "Edad", ylab = "Frecuencia", col = "#3A8DCC", ylim = c(0, max(max(hist(edades_mujeres, breaks = breaks, plot = FALSE)$counts), max(hist(edades_hombres, breaks = breaks, plot = FALSE)$counts))))
+  hist(edades_hombres, breaks = breaks, add = TRUE, col = "#FF6EC7", density = 40)
+  
+  # Agregamos la leyenda
+  legend("topright", legend = c("Mujeres", "Hombres"), fill = c("#3A8DCC", "#FF6EC7"))
+}
 
-hist(edades_hombres, breaks = 10, add = TRUE, col = "#FF6EC7", density = 40)
-legend("topright", legend = c( "Hombres","Mujeres"), fill = c("#3A8DCC", "#FF6EC7"))
+funcion_graf_pensionados("Invalidez")
+funcion_graf_pensionados("Sucesión")
+funcion_graf_pensionados("Vejez")
+
 ```
 
 ```{r}
