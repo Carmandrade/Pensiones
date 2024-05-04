@@ -23,10 +23,7 @@ fondoB[] <- lapply(fondoB, function(x) if(is.character(x)) as.factor(x) else x)
 fondoB$`Rige de la Pensión`<- as.Date(fondoB$`Rige de la Pensión`)
 fondoB$FEC_NAC<- as.Date(fondoB$FEC_NAC)
 
-fondoB<- fondoB %>% 
-  mutate(`Rige de la Pensión` = if_else(is.na(`Rige de la Pensión`), 
-                                  FEC_NAC + years(65), 
-                                  `Rige de la Pensión`))
+
 summary(fondoB)
 ```
 
@@ -102,6 +99,10 @@ ggplot(fondoB, aes(x = edad)) +
 ```
 
 
+```{r}
+hist(fondoB$edad, breaks = 20, main ="", xlab = "Edad", ylab = "Frecuencia", col = "#3A8DCC")
+
+```
 
 ```{r, message=FALSE, warning=FALSE}
 fondoB_Act <- read_excel("BD Activos.xlsx", sheet = "Fondo B", range = cell_cols(1:363))
@@ -132,19 +133,34 @@ fondoB_Act$Edad <- as.numeric(difftime(fecha_actual, fondoB_Act$Fec.Nac, units =
 
 summary(fondoB_Act$Edad)
 
-hist(fondoB_Act$Edad, breaks = 10, main = "Histograma de Edades", xlab = "Edad", ylab = "Frecuencia", col = "lightblue")
+hist(fondoB_Act$Edad, breaks = 10, main = "Histograma de Edades", xlab = "Edad", ylab = "Frecuencia", col = "#3A8DCC")
 
+
+```
+
+```{r}
+edades_mujeres <- fondoB$edad[fondoB_Act$Sexo == "F"]
+edades_hombres <- fondoB$edad[fondoB_Act$Sexo == "M"]
+hist(edades_mujeres, breaks = 10, main = "", xlab = "Edad", ylab = "Frecuencia", col = "#3A8DCC", ylim = c(0, max(hist(edades_mujeres, breaks = 10)$counts, hist(edades_hombres, breaks = 10)$counts)))
+
+hist(edades_hombres, breaks = 10, add = TRUE, col = "#FF6EC7", density = 40)
+legend("topright", legend = c( "Hombres","Mujeres"), fill = c("#3A8DCC", "#FF6EC7"))
+```
+
+```{r}
 edades_mujeres <- fondoB_Act$Edad[fondoB_Act$Sexo == "F"]
 edades_hombres <- fondoB_Act$Edad[fondoB_Act$Sexo == "M"]
+hist(edades_mujeres, breaks = 10, main = "", xlab = "Edad", ylab = "Frecuencia", col = "#3A8DCC", ylim = c(0, max(hist(edades_mujeres, breaks = 10)$counts, hist(edades_hombres, breaks = 10)$counts)))
 
-hist(edades_mujeres, breaks = 10, main = "Histograma de Edades por Sexo", xlab = "Edad", ylab = "Frecuencia", col = "darkblue", ylim = c(0, max(hist(edades_mujeres, breaks = 10)$counts, hist(edades_hombres, breaks = 10)$counts)))
-hist(edades_hombres, breaks = 10, add = TRUE, col = "hotpink", density = 20)
-legend("topright", legend = c("Mujeres", "Hombres"), fill = c("darkblue", "hotpink"))
+hist(edades_hombres, breaks = 10, add = TRUE, col = "#FF6EC7", density = 40)
+legend("topright", legend = c( "Hombres","Mujeres"), fill = c("#3A8DCC", "#FF6EC7"))
+```
 
 
+```{r}
 boxplot(fondoB_Act$Edad, main = "Diagrama de Caja de Edades", ylab = "Edad")
 
-boxplot(Edad ~ Sexo, data = fondoB_Act, main = "Diagrama de Caja de Edades por Sexo", ylab = "Edad", col = c("darkblue", "hotpink"))
+boxplot(Edad ~ Sexo, data = fondoB_Act, main = "Diagrama de Caja de Edades por Sexo", ylab = "Edad", col = c("#3A8DCC", "#FF6EC7"))
 
 
 ```
@@ -167,7 +183,7 @@ fondoB_Act$Antiguedad <- apply(fondoB_Act[, -c(1:3)], 1, calcular_antiguedad)
 
 summary(fondoB_Act$Antiguedad)
 
-hist(fondoB_Act$Antiguedad, breaks = 10, main = "Histograma de Antigüedad", xlab = "Antigüedad", ylab = "Frecuencia", col = "lightblue")
+hist(fondoB_Act$Antiguedad, breaks = 10, main = "Histograma de Antigüedad", xlab = "Antigüedad", ylab = "Frecuencia", col = "#3A8DCC")
 
 frecuencias <- hist(fondoB_Act$Antiguedad, breaks = 10, plot = FALSE)$counts
 
@@ -186,7 +202,7 @@ summary(columnasDatos)
 tabla_sexo <- table(fondoB_Act$Sexo)
 print(tabla_sexo)
 
-barplot(tabla_sexo, main = "Distribución de Género", xlab = "Género", ylab = "Frecuencia", col = "lightblue")
+barplot(tabla_sexo, main = "Distribución de Género", xlab = "Género", ylab = "Frecuencia", col = "#3A8DCC")
 
 
 ```
