@@ -11,6 +11,7 @@ library(tidyverse)
 library(lubridate)
 library(ggplot2)
 library(dplyr)
+library(xtable)
 ```
 
 ```{r, message=FALSE, warning=FALSE}
@@ -225,4 +226,69 @@ barplot(tabla_sexo, main = "Distribución de Género", xlab = "Género", ylab = 
 ```
 
 
+```{r, message=FALSE, warning=FALSE}
+fondoB_Fin <- read_excel("BD Financiero.xlsx", sheet = "Datos Historicos Fondo B", range = cell_cols(1:6))
+```
+
+```{r}
+# Inicializar la columna de reservas
+fondoB_Fin$Reservas <- numeric(nrow(fondoB_Fin))
+
+# Calcular reservas para el primer mes
+fondoB_Fin$Reservas[1] <- (fondoB_Fin$Activo[1] + fondoB_Fin$"Plusvalía/Minusvalias"[1] + fondoB_Fin$"Cotizaciones Netas"[1] - fondoB_Fin$"Pago de Pensiones"[1])/1000000
+
+# Calcular reservas para los meses siguientes
+for (i in 2:nrow(fondoB_Fin)) {
+  fondoB_Fin$Reservas[i] <- (fondoB_Fin$Reservas[i-1]*1000000 + 
+                            fondoB_Fin$"Plusvalía/Minusvalias"[i] + 
+                            fondoB_Fin$"Cotizaciones Netas"[i] - 
+                            fondoB_Fin$"Pago de Pensiones"[i])/1000000
+}
+
+# Ver el dataframe actualizado
+print(fondoB_Fin)
+```
+```{r}
+# Crear el histograma de la columna Reservas
+# Crear el gráfico de líneas de las reservas en orden temporal
+plot(fondoB_Fin$Período, fondoB_Fin$Reservas, 
+     type = "o", # Línea y puntos
+     main = "Evolución de las Reservas en Unidades de Millón", 
+     xlab = "Periodo", 
+     ylab = "Reservas (Millones)", 
+     col = "blue", 
+     lwd = 2, # Grosor de la línea
+     pch = 16) # Tipo de punto
+
+# Opcional: Rotar etiquetas del eje x para mejor visibilidad
+# if needed
+par(las=2)
+```
+
+```{r}
+# Crear el boxplot de las reservas
+boxplot(fondoB_Fin$Reservas,
+        main = "Distribución de las Reservas en Unidades de Millón",
+        ylab = "Reservas (Millones)",
+        col = "lightblue")
+```
+
+```{r}
+summary(fondoB_Fin$Reservas)
+```
+
+```{r}
+# Ajustar un modelo de regresión lineal
+modelo <- lm(Reservas ~ as.numeric(Período), data = fondoB_Fin)
+summary(modelo)
+
+# Gráfico con la línea de regresión
+plot(fondoB_Fin$Período, fondoB_Fin$Reservas, 
+     main = "Evolución de las Reservas con Línea de Tendencia", 
+     xlab = "Periodo", 
+     ylab = "Reservas (Millones)", 
+     col = "blue", 
+     pch = 16)
+abline(modelo, col = "red")
+```
 
