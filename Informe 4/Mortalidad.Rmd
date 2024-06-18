@@ -1,0 +1,213 @@
+---
+title: "Mortalidad"
+author: "Maricruz Vasquez"
+date: "2024-06-10"
+output: html_document
+---
+
+
+Carga de tabla de mortalidad
+```{r}
+library(readxl)
+
+tabla_completa<-read_excel("tabla_completa.xls")
+colnames(tabla_completa)
+```
+## Matriz de  mortalidad qx version 1
+```{r}
+
+df<- tabla_completa
+min_ynac <- min(unique(df$ynac))
+max_ynac <- max(df$ynac)
+min_edad <- min(df$edad)
+max_edad <- max(df$edad)
+
+# Ajusta estos valores según tus datos específicos
+sex_range <- 1:2
+ynac_range <- min_ynac:max_ynac
+edad_range <- min_edad:max_edad
+
+# Inicializa el arreglo con NA para manejar cualquier combinación no existente
+qx_array <- array(NA, dim = c(length(sex_range), length(ynac_range), length(edad_range), 1),
+                  dimnames = list(sex = sex_range, ynac = ynac_range, edad = edad_range, qx = "qx"))
+
+for(i in seq_len(nrow(df))) {
+  row <- df[i, ]
+  sex_idx <- as.integer(row$sex) - min(sex_range) + 1
+  ynac_idx <- as.integer(row$ynac) - min_ynac + 1
+  edad_idx <- as.integer(row$edad) - min_edad + 1
+  qx_array[sex_idx, ynac_idx, edad_idx, 1] <- as.numeric(row$qx)
+}
+
+# Ejemplo para obtener qx para sex=1, ynac=1886, edad=115
+resultado_qx <- qx_array[1, 1886 - min_ynac + 1, 115 - min_edad + 1, 1]
+print(resultado_qx)
+min_ynac
+min_edad
+```
+
+
+## Matriz de  mortalidad qx version 2
+
+```{r}
+
+df<- tabla_completa
+min_ynac <- min(unique(df$ynac))
+max_ynac <- max(df$ynac)
+min_edad <- min(df$edad)
+max_edad <- max(df$edad)
+
+# Ajusta estos valores según tus datos específicos
+sex_range <- 1:2
+ynac_range <- min_ynac:max_ynac
+edad_range <- min_edad:max_edad
+
+# Inicializa el arreglo con NA para manejar cualquier combinación no existente
+qx <- array(NA, dim = c(length(sex_range), length(ynac_range), length(edad_range)),
+                  dimnames = list(sex = sex_range, ynac = ynac_range, edad = edad_range))
+
+for(i in seq_len(nrow(df))) {
+  row <- df[i, ]
+  sex_idx <- as.integer(row$sex) - min(sex_range) + 1
+  ynac_idx <- as.integer(row$ynac) - min_ynac + 1
+  edad_idx <- as.integer(row$edad) - min_edad + 1
+  qx[sex_idx, ynac_idx, edad_idx] <- as.numeric(row$qx)
+}
+
+qx[1, 1950 - min_ynac + 1, 0 - min_edad + 1]
+```
+
+
+## Matriz de Invalidez
+
+```{r}
+edad <- 1:115
+prob_mujeres <- c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0.00024, 0.00029, 0.00032, 0.00034, 0.00036, 0.00039, 0.00041, 0.00043, 0.00047, 0.00049,
+  0.00052, 0.00055, 0.00059, 0.00062, 0.00065, 0.00068, 0.00069, 0.00072, 0.00077, 0.00085,
+  0.00098, 0.00117, 0.00138, 0.00159, 0.00188, 0.00219, 0.00256, 0.00299, 0.00348, 0.00408,
+  0.00452, 0.00502, 0.00557, 0.00618, 0.00685, 0.00762, 0.00845, 0.00939, 0.01044, 0.01071,
+  0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079,
+  0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079,
+  0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079,
+  0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079,  0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079,
+  0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079, 0.01079
+)
+
+prob_hombres <- c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0, 0.00035, 0.00035, 0.00035, 0.00035, 0.00035, 0.00033, 0.00031, 0.00030, 0.00028,
+  0.00027, 0.00025, 0.00024, 0.00024, 0.00025, 0.00026, 0.00027, 0.00027, 0.00029, 0.00032,
+  0.00036, 0.00039, 0.00044, 0.00050, 0.00056, 0.00063, 0.00071, 0.00081, 0.00091, 0.00103,
+  0.00116, 0.00130, 0.00146, 0.00163, 0.00181, 0.00200, 0.00221, 0.00244, 0.00267, 0.00292,
+  0.00318, 0.00346, 0.00376, 0.00405, 0.00435, 0.00464, 0.00494, 0.00524, 0.00553, 0.00583,
+  0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612,
+  0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612,
+  0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612,
+  0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612, 0.00612,0.00612, 0.00612, 0.00612, 0.00612, 0.00612,0.00612, 0.00612)
+
+
+length(prob_mujeres)
+
+q_inv<- cbind(prob_hombres, prob_mujeres)
+
+class(q_inv[60,1])
+```
+
+
+
+
+```{r}
+
+update_q <- function(q_prime) {
+  q <- numeric(3)
+  for (i in 1:3) {
+    other_indices <- setdiff(1:3, i)
+    q[i] <- q_prime[i] * (1 - 0.5 * (q_prime[other_indices[1]] + q_prime[other_indices[2]]) +
+                             (1/3) * q_prime[other_indices[1]] * q_prime[other_indices[2]])
+  }
+  return(q)
+}
+
+prueba<-array(NA, dim=c(2,2,2,6,5))
+prueba[1,1,1,1,2:4]<-update_q(c(as.numeric(qx[1,1990-min_ynac, 60-min_edad]), 0, q_inv[60,2]))
+prueba[1,1,1,1,]
+
+```
+
+```{r}
+px<-array(NA, dim = c(2, length(1950:2010), length(0:115), 6,5))
+
+for (sex in 1:2) {
+  for (ynac in 1950:2010) {
+    for (edad in 0:115) {
+      cat(sex, ynac, edad, "\n")
+      # 1. activos1 con derechos
+      px[sex, ynac,edad+1,1,2:4]<-update(c(as.numeric(qx[1,ynac-min_ynac+1, edad-min_edad+1]), 0.9, q_inv[edad+1,sex+1]))
+      px[sex, ynac,edad+1,1,5]<-0
+      px[sex, ynac,edad+1,1,1]<-1-sum(px[sex, ynac,edad+1,1,2:5])
+      # 2. Invalidez
+      px[sex, ynac,edad+1,2,1]<-0
+      px[sex, ynac,edad+1,2,3]<-0
+      px[sex, ynac,edad+1,2,5]<-0
+      px[sex, ynac,edad+1,2,4]<-qx[sex, ynac-min_ynac+1,edad-min_edad+1]
+      px[sex, ynac,edad+1,2,2]<-1-px[sex, ynac,edad+1,2,4]
+      # 3. Vejez
+      px[sex, ynac,edad+1,3,1:2]<-0
+      px[sex, ynac,edad+1,3,5]<-0
+      px[sex, ynac,edad+1,3,4]<-qx[sex, ynac-min_ynac,edad-min_edad]
+      px[sex, ynac,edad+1,3,3]<-1-px[sex, ynac,edad+1,3,4]
+      # 4. Sucesion
+      px[sex, ynac,edad+1,4,1:3]<-0
+      px[sex, ynac,edad+1,4,5]<-qx[ifelse(sex==1,2,1), ynac-min_ynac,edad-min_edad]
+      px[sex, ynac,edad+1,4,4]<-1-px[sex, ynac,edad+1,4,5]
+      # 5. Muerte
+      px[sex, ynac,edad+1,5,1:4]<-0
+      px[sex, ynac,edad+1,5,5]<-1
+      # 6. A2 activo sin derechos
+      px[sex, ynac,edad+1,6,2:4]<-0
+      px[sex, ynac,edad+1,6,5]<-qx[sex, ynac-min_ynac,edad-min_edad]
+      px[sex, ynac,edad+1,6,1]<-1-px[sex, ynac,edad+1,6,5]
+      
+    }
+  }
+}
+
+
+```
+
+
+
+```{r}
+library(dplyr)
+
+# Example dataframe
+df <- data.frame(
+  V1 = c(0, 0, 0, 0),
+  V2 = c(0, 0, 3, 0),
+  V3 = c(3, 0, 1, 0),
+  V4 = c(0, 5, 0, 0),
+  V5 = c(1, 0, 4, 0),
+  V6 = c(0, 0, 0, 6)
+)
+
+# Function to replace zeros before the first non-zero number with NA
+replace_zeros_with_na <- function(x) {
+  first_non_zero <- which(x != 0)[1] # Locate the first non-zero element
+  if (is.na(first_non_zero)) { # If there's no non-zero element
+    x
+  } else {
+    x[1:(first_non_zero - 1)] <- NA # Replace zeros before the first non-zero
+    x
+  }
+}
+
+# Apply the function to each row using `apply` function
+df[] <- t(apply(df, 1, replace_zeros_with_na))
+
+# Print the modified dataframe
+print(df)
+
+```
+
+
+
