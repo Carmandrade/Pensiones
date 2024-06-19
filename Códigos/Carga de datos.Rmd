@@ -292,3 +292,43 @@ plot(fondoB_Fin$Período, fondoB_Fin$Reservas,
 abline(modelo, col = "red")
 ```
 
+```{r}
+# Redondear hacia abajo las edades
+
+fondoB_Act <- fondoB_Act %>%
+  mutate(Edad = floor(Edad))
+
+fondoB <- fondoB %>%
+  mutate(edad = floor(edad))
+
+
+tabla_estados <- data.frame(
+  edad = 0:115
+)
+
+# Contar los activos por edad
+activos <- fondoB_Act %>%
+  group_by(Edad) %>%
+  summarise(activo = n()) %>%
+  rename(edad = Edad)
+
+# Contar los otros estados por edad
+estados <- fondoB %>%
+  group_by(edad, COD_TIPO_PENSION) %>%
+  summarise(count = n()) %>%
+  spread(COD_TIPO_PENSION, count, fill = 0) %>%
+  rename(invalidez = Invalidez, vejez = Vejez, susecion = Sucesión)
+
+# Combinar los resultados en la tabla de resultados
+tabla_estados <- tabla_estados %>%
+  left_join(activos, by = "edad") %>%
+  left_join(estados, by = "edad") %>%
+  replace(is.na(.), 0)
+
+
+print(tabla_estados)
+
+
+
+```
+
