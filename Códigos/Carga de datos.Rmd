@@ -122,8 +122,6 @@ for (col in 1:ncol(fondoB_Act)) {
     colnames(fondoB_Act)[col] <- nuevos_nombres[col-3]
   }
 }
-
-
 ```
 # Calcula la edad según la fecha de nacimiento, devuelve gráficos
 ```{r}
@@ -189,6 +187,7 @@ calcular_antiguedad <- function(fila) {
   if (is.na(primera_fecha)) {
     return(NA)  # Si nunca ha pagado, la antigüedad es NA
   } else {
+    
     fecha_inicio <- as.Date(names(fila)[primera_fecha], format = "%Y-%m-%d")
     fecha_actual <- as.Date("2023-12-31")  # Fecha actual
     antiguedad <- as.numeric(difftime(fecha_actual, fecha_inicio, units = "days")) / 365.25
@@ -317,13 +316,13 @@ estados <- fondoB %>%
   group_by(edad, COD_TIPO_PENSION) %>%
   summarise(count = n()) %>%
   spread(COD_TIPO_PENSION, count, fill = 0) %>%
-  rename(invalidez = Invalidez, vejez = Vejez, susecion = Sucesión)
+  rename(invalidez = Invalidez, vejez = Vejez, sucesion = Sucesión)
 
 # Combinar los resultados en la tabla de resultados
 tabla_estados <- tabla_estados %>%
   left_join(activos, by = "edad") %>%
-  left_join(estados, by = "edad") %>%
-  replace(is.na(.), 0)
+  left_join(estados, by = "edad") 
+#%>%eplace(is.na(.), 0)
 
 
 print(tabla_estados)
