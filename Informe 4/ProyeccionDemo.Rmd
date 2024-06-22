@@ -401,14 +401,18 @@ for (s in 1:100) {
   ynac <- 2023-20-1906
   for (i in 2:(115-20)) { 
 
-    if((cot_h[i, 20] >= 180) || (cot_h[i+1, 20] - cot_h[i-1, 20] >= 12)){
-      
+    if(    (cot_h[i,20] >= 180) 
+          || (X[i+20] && (20+i<48))
+          || (Y[i+20] && (20+i>=48))  ){
+        #A7 tienen derecho a invalidez y pueden morir
         prob<-px[1, ynac, 20+i-2 +1, 7, ]
         
-        if((20+i>=65)){
-          prob<-px[1, ynac, 20+i-2 +1, 1, ]
+        if((j+i>=65)){
+          #A1 tienen derecho a invalidez, vejez y pueden sucesion
+            prob<-px[1, ynac, 20+i-2 +1, 1, ]
         }
-        matriz_esto_1[i,]<- (rmultinom(1,matriz_esto_1[i-1,1], prob)) 
+        
+        matriz_esto_2[i,]<- (rmultinom(1,matriz_esto_2[i-1,1], prob)) 
     
     }else{
         matriz_esto_1[i,]<- (rmultinom(1,matriz_esto_1[i-1,1], px[1, ynac, 20+i-2 +1, 6, ]))
