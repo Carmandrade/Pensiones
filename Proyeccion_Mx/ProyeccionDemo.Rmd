@@ -157,7 +157,7 @@ px[2, 2003-1906,20,7,]
 Se omiten las pensiones por orfandad, es decir la proyeccion comienza para las personas activas de 20 años
 ```{r}
 poblacion<- read.csv("Poblacion.csv")
-poblacion_activo_inv_vejez<-poblacion[21:116,-c(1,4)]
+poblacion_activo_inv_vejez<-poblacion[21:116,-c(1,2,4)]
 #poblacion_suc_muerte<- cbind()
 
 poblacion_inicial<- cbind(poblacion_activo_inv_vejez, poblacion[21:116,4],rep(0,116-20))
@@ -334,24 +334,27 @@ mean_acumulados_h
 
 ### Matriz de cotizaciones
 ```{r}
-den_cot_h<-rep(1,115)
+den_cot_h<-rep(1,116)
 den_cot_h[1:length(mean_values_h)]<-unlist(mean_values_h)
 den_cot_h[74:116]<-1
 
+mean_cot_h<-rep(1,116)
 mean_cot_h<-unlist(mean_acumulados_h)
 mean_cot_h[74:116]<-180
+
 cot_h <- array(0, dim=c(115,115))
 
-
-for (edad in 1:115) {
-  cot_h[1,edad]<-mean_cot_h[edad]
-  for (i in 2:(115-i)) {
-    cot_h[i,edad]<-cot_h[i-1,edad]+den_cot_h[edad]*12
+for (x in 1:115) {
+  cot_h[1,x] <- mean_cot_h[x]
+  k<-2
+  while((x+k)<=115) {
+    cot_h[k,x] <- cot_h[k-1,x]+den_cot_h[x]*12
+    k<-k+1
   }
 }
 
 #cot_h[anno_proyeccion, edad_inicial] por ejemplo cuantas cotizaciones tiene una hombre de 50 dentro de dos annos:
-cot_h[,25]
+cot_h[,26]
 ```
 
 
@@ -413,7 +416,7 @@ for (s in 1:100) {
             prob<-px[1, ynac, 20+i-1, 1, ]
         }
         
-        matriz_esto_1[i,]<- (rmultinom(1,matriz_esto_2[i-1,1], prob)) 
+        matriz_esto_1[i,]<- (rmultinom(1,matriz_esto_1[i-1,1], prob)) 
     
     }else{
         matriz_esto_1[i,]<- (rmultinom(1,matriz_esto_1[i-1,1], px[1, ynac, 20+i-1, 6, ]))
@@ -459,6 +462,10 @@ for (s in 1:100) {
         matriz_esto_2[i,]<-(rmultinom(1, matriz_esto_2[i-1,4], px[1, ynac2, j+i-1, 4, ])) + matriz_esto_2[i,]
         matriz_esto_2[i,]<-(rmultinom(1, matriz_esto_2[i-1,5], px[1, ynac2, j+i-1, 5, ])) + matriz_esto_2[i,]
         
+        i<-i+1
+      }
+      while ((i+j>115) && i<=115) {
+        matriz_esto_2[i,]<-matriz_esto_2[115-j,]
         i<-i+1
       }
       
@@ -508,12 +515,13 @@ ggplot(df_long, aes(x = Year, y = Value, color = State)) +
 Hace Sim=1000 simulaciones para cada edad, luego suma todas las proyecciones para todas las edades y obtiene la "v2_matriz_resumenEsperanza_H_9" que es analoga a "matriz_resumenEsperanza_H_9"
 ```{r}
 v2_matriz_resumenEsperanza_H_9<-array(0,dim = c(115,5))
+esperanza_matrizEdad_x<-array(0,dim = c(115,5,115))
 sim<-100
 ```
 
 
 ```{r}
-for (edad_x in 20:115) {
+for (edad_x in 20:113) {
   #aqui se guardan las simulaciones para la matriz de proyeccion de la edad_x
   simulaciones<- array(0,dim = c(115,5,sim))
   
@@ -526,7 +534,7 @@ for (edad_x in 20:115) {
     ynac <- 2023-edad_x-1906
     
     for (i in 2:(115-edad_x)) { 
-  
+      
       if(    (cot_h[i,edad_x] >= 180) 
             || (X[i+edad_x] && (edad_x+i<48))
             || (Y[i+edad_x] && (edad_x+i>=48))  ){
@@ -538,42 +546,77 @@ for (edad_x in 20:115) {
               prob<-px[1, ynac, edad_x+i-1, 1, ]
           }
           
-          matriz_esto_1[i,]<- (rmultinom(1,matriz_esto_1[i-1,1], prob)) 
+          if (matriz_esto_1[i-1, 1] > 0) {
+              matriz_esto_1[i,] <- rmultinom(1, matriz_esto_1[i-1, 1], prob)
+          } else {
+              # Manejo del caso en que no hay población para simular
+              matriz_esto_1[i,] <- rep(0, 5)
+          }
       
       }else{
-          matriz_esto_1[i,]<- (rmultinom(1,matriz_esto_1[i-1,1], px[1, ynac, edad_x+i-1, 6, ]))
+          if (matriz_esto_1[i-1, 1] > 0) {
+              matriz_esto_1[i,]<- (rmultinom(1,matriz_esto_1[i-1,1], px[1, ynac, edad_x+i-1, 6, ]))
+          } else {
+              # Manejo del caso en que no hay población para simular
+              matriz_esto_1[i,] <- rep(0, 5)
+          }
       }
       
+      if (matriz_esto_1[i-1, 2] > 0) {
       matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,2], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
-      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,3], px[1, ynac, edad_x+i-2+1, 3, ])) + matriz_esto_1[i,]
-      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,4], px[1, ynac, edad_x+i-2+1, 4, ])) + matriz_esto_1[i,]
-      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,5], px[1, ynac, edad_x+i-2+1, 5, ])) + matriz_esto_1[i,]
+        } 
+      if (matriz_esto_1[i-1, 3] > 0) {
+      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,3], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
+        }
+      if (matriz_esto_1[i-1, 4] > 0) {
+      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,4], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
+        } 
+      if (matriz_esto_1[i-1, 5] > 0) {
+      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,5], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
+        }  
       
-    } 
-    
+    }
     simulaciones[,,s]<- matriz_esto_1 #guarda "sim" simulaciones de la matriz de edad_x
   }
   
-  esperanzaEdad_x <- array(0,dim = c(115,5)) #saca la esperanza para matriz de edad_x
-  for (i in 1:115) {
-    for (j in 1:5) {
-      esperanzaEdad_x[i,j] <- round(mean(simulaciones[i,j,]))
+    esperanzaEdad_x <- array(0,dim = c(115,5)) #saca la esperanza para matriz de edad_x
+    for (i in 1:115) {
+      for (j in 1:5) {
+        esperanzaEdad_x[i,j] <- mean(simulaciones[i,j,])
+      }
     }
-  }
+    esperanza_matrizEdad_x[,,edad_x-19]<-esperanzaEdad_x
     #suma para todas las edades
     v2_matriz_resumenEsperanza_H_9<-v2_matriz_resumenEsperanza_H_9+esperanzaEdad_x
-}
+    
 
+}
+```
+
+```{r}
+esperanza_matrizEdad_x[,,1]
 ```
 
 
 
+## Grafico Proyeccion 2
+```{r}
+df<-as.data.frame(unlist(v2_matriz_resumenEsperanza_H_9))
+df$Year <- 1:nrow(df)
 
+# Convertir el data frame a formato largo (long format) para ggplot
+df_long <- df %>%
+  pivot_longer(cols = -Year, names_to = "State", values_to = "Value")
 
-
-
-
-
+# Crear el gráfico
+ggplot(df_long, aes(x = Year, y = Value, color = State)) +
+  geom_line() +
+  labs(title = "Comportamiento de los Estados a través del tiempo",
+       x = "Año",
+       y = "Poblacion",
+       color = "Estado") +
+  theme_minimal()
+```
 ## Calculos de mujeres
 
 ```{r}
