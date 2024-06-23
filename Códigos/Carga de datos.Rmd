@@ -332,4 +332,75 @@ print(tabla_estados)
 
 write.csv(tabla_estados, "Poblacion.csv")
 ```
+```{r}
+# Redondear hacia abajo las edades
+
+fondoB_Act <- fondoB_Act %>%
+  mutate(Edad = floor(Edad))
+
+fondoB_Act_hombres <- subset(fondoB_Act, Sexo == "M")
+fondoB_Act_mujeres <- subset(fondoB_Act, Sexo == "F")
+
+fondoB <- fondoB %>%
+  mutate(edad = floor(edad))
+
+fondoB_hombres <- subset(fondoB, SEXO == "M")
+fondoB_mujeres <- subset(fondoB, SEXO == "F")
+
+
+tabla_estados_hom <- data.frame(
+  edad = 0:115
+)
+
+tabla_estados_muj <- data.frame(
+  edad = 0:115
+)
+
+# Contar los activos por edad
+activos_hom <- fondoB_Act_hombres %>%
+  group_by(Edad) %>%
+  summarise(activo = n()) %>%
+  rename(edad = Edad)
+
+activos_muj <- fondoB_Act_mujeres %>%
+  group_by(Edad) %>%
+  summarise(activo = n()) %>%
+  rename(edad = Edad)
+
+
+# Contar los otros estados por edad
+estados_hom <- fondoB_hombres %>%
+  group_by(edad, COD_TIPO_PENSION) %>%
+  summarise(count = n()) %>%
+  spread(COD_TIPO_PENSION, count, fill = 0) %>%
+  rename(invalidez = Invalidez, vejez = Vejez, sucesion = Sucesión)
+
+estados_muj <- fondoB_mujeres %>%
+  group_by(edad, COD_TIPO_PENSION) %>%
+  summarise(count = n()) %>%
+  spread(COD_TIPO_PENSION, count, fill = 0) %>%
+  rename(invalidez = Invalidez, vejez = Vejez, sucesion = Sucesión)
+
+# Combinar los resultados en la tabla de resultados
+tabla_estados_hom <- tabla_estados_hom %>%
+  left_join(activos_hom, by = "edad") %>%
+  left_join(estados_hom, by = "edad") %>% 
+  replace(is.na(.), 0) %>%
+  mutate(muerte = 0)
+
+tabla_estados_muj <- tabla_estados_muj %>%
+  left_join(activos_muj, by = "edad") %>%
+  left_join(estados_muj, by = "edad") %>% 
+  replace(is.na(.), 0) %>%
+  mutate(muerte = 0)
+
+
+print(tabla_estados_hom)
+
+print(tabla_estados_muj)
+
+
+write.csv(tabla_estados, "Poblacion_hom.csv")
+write.csv(tabla_estados, "Poblacion_muj.csv")
+```
 
