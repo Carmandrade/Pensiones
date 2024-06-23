@@ -1,12 +1,11 @@
 ---
-
 title: "Mujeres PD"
 author: "Fondo B"
 date: "2024-06-22"
 output: html_document
 ---
 
-
+## 1. Liberias
 ```{r}
 library(readxl)
 library(lubridate)
@@ -19,7 +18,7 @@ library(dplyr)
 library(janitor)
 ```
 
-## Matriz de  mortalidad qx
+## 2.1 Matriz de  mortalidad qx
 Se carga la tabla dinamica de mortalidad de la SUPEN
 ```{r}
 tabla_completa<-read_excel("tabla_completa.xls")
@@ -51,8 +50,7 @@ for(i in seq_len(nrow(df))) {
 qx[1, 1935 - min_ynac + 1, 88 - min_edad + 1]
 ```
 
-
-## Matriz de Invalidez
+## 2.2 Matriz de Invalidez
 Las probabilidades de invalidez son constantes para todos los años (no es una tabla dinamica)
 ```{r}
 prob_mujeres <- c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -86,7 +84,7 @@ q_inv<- cbind(prob_hombres, prob_mujeres)
 class(q_inv[60,1])
 ```
 
-### Funcion de probabilidades en competencia
+## 2.3 Funcion de probabilidades en competencia
 Convierte 3 probs normales a 3 probs en competencia
 ```{r}
 update_q <- function(q_prime) {
@@ -100,7 +98,7 @@ update_q <- function(q_prime) {
 }
 ```
 
-### Matriz px de transicion para los 5 estados
+## 2.4 Matriz px de transicion para los 5 estados
 ```{r}
 px<-array(NA, dim = c(2, length(1907:2028), length(0:115), 7,5))
 
@@ -155,21 +153,21 @@ px[2, 2003-1906,20,7,]
 ```
 
 
-# Poblacion inicial para la proyeccion demografica
+
+## 3. Poblacion inicial para la proyeccion demografica
 Se omiten las pensiones por orfandad, es decir la proyeccion comienza para las personas activas de 20 años
 ```{r}
-poblacion<- read.csv("Poblacion.csv")
-poblacion_activo_inv_vejez<-poblacion[21:116,-c(1,2,4)]
-#poblacion_suc_muerte<- cbind()
+poblacion_f<- read.csv("Poblacion_muj.csv")
+poblacion_activo_inv_vejez<-poblacion_f[21:116,-c(1,2,4)]
 
-poblacion_inicial<- cbind(poblacion_activo_inv_vejez, poblacion[21:116,4],rep(0,116-20))
+poblacion_inicial_f<- cbind(poblacion_activo_inv_vejez, poblacion[21:116,4])
 
-colnames(poblacion_inicial)<- c("activo", "invalidez", "vejez", "sucesion", "muerte")
-head(poblacion_inicial)
+colnames(poblacion_inicial_f)<- c("activo", "invalidez", "vejez", "sucesion", "muerte")
+head(poblacion_inicial_f)
 ```
 
 
-# Salarios
+## 4.1 Salarios
 Se cargan los datos de activos
 ```{r}
 activos <- read_excel("BD Activos.xlsx", sheet = "Fondo B")
@@ -202,9 +200,8 @@ activos <- cbind(activos[,1:3] ,activos[,4:363] * inflacion, activos[,364:365])
 
 
 
-# Conteo de cotizaciones y salarios
-
-```{r, replace_na}
+## 4.2 Funcion Replace_NA
+```{r}
 # Function to replace zeros before the first non-zero number with NA
 replace_zeros_with_na <- function(x) {
   first_non_zero <- which(x != 0)[1] # Locate the first non-zero element
@@ -225,8 +222,7 @@ replace<- function(df){
   df
 }
 ```
-
-### Separacion de la base activos en hom y muj para cotizaciones
+## 4.3 Separacion de la base activos en hom y muj para cotizaciones
 ```{r, separacion de base por sexo}
 #Convierte la matriz a 0 y 1s y llena de NAs las primeras filas
 df_transformado <- as.data.frame(lapply(activos[,4:363], function(x) ifelse(x > 10000, 1, 0)))
@@ -237,7 +233,7 @@ act_mujeres<- activos_final[activos_final$Sexo=="F",]
 act_hombres<- activos_final[activos_final$Sexo=="M",]
 ```
 
-### Separacion de la base activos en hom y muj para salarios
+## 4.4 Separacion de la base activos en hom y muj para salarios
 ```{r, separacion de base por sexo}
 df_salarios<-replace(activos[,4:363])
 salarios_final<-cbind(activos[,2:3], df_salarios)
@@ -245,12 +241,11 @@ sal_mujeres<- salarios_final[salarios_final$Sexo=="F",]
 sal_hombres<- salarios_final[salarios_final$Sexo=="M",]
 ```
 
-### Matriz de densidades de cotizaciones anuales por edad
+## 4.5 Matriz de densidades de cotizaciones anuales por edad
 ```{r}
-# Suponemos que 'df' es tu dataframe, con la primera columna como fecha de nacimiento
+# 'df' es el dataframe, con la primera columna como fecha de nacimiento
 # y las siguientes 360 columnas como los datos de cotización mensuales.
 
-# Asegúrate de que la fecha de nacimiento está en formato de fecha
 df_f<-act_mujeres[,c(-2)]
 sal_f<-sal_mujeres[,c(-2)]
 
@@ -299,7 +294,7 @@ sal_f_resultado <- as.data.frame(sal_promedios_f)
 names(sal_f_resultado) <- paste("Edad", 0:max_edad, sep="_")
 ```
 
-### Vector densidad de cotizacion anual por edad 
+## 4.6 Vector densidad de cotizacion anual por edad 
 ```{r}
 mean_values_f <- df_f_resultado %>%
   summarise(across(where(is.numeric), mean, na.rm = TRUE))
@@ -307,7 +302,7 @@ mean_values_f <- df_f_resultado %>%
 mean_muj<-mean_values_f
 ```
 
-### Vector salario anual promedio por edad mujeres
+## 4.7 Vector salario anual promedio por edad 
 ```{r}
 sal_mean_f <- sal_f_resultado %>%
   summarise(across(where(is.numeric), mean, na.rm = TRUE))
@@ -316,7 +311,7 @@ sal_mean_muj<-sal_mean_f
 plot(as.numeric(sal_mean_muj))
 ```
 
-### Matriz cot acumuladas por edad mujeres
+## 4.8 Matriz cot acumuladas por edad mujeres
 ```{r}
 matriz_acumuladas_f <- matrix(NA, nrow = nrow(df_f), ncol = max_edad + 1)
 
@@ -340,7 +335,7 @@ names(df_f_resultado_acumuladas) <- paste("Edad", 0:max_edad_f, sep = "_")
 print(df_f_resultado_acumuladas)
 ```
 
-### Vector de cotizaciones acumuladas por edad 
+## 4.9 Vector de cotizaciones acumuladas por edad 
 ```{r}
 # Clean column names
 df_f_resultado_acumuladas <- df_f_resultado_acumuladas %>%
@@ -358,7 +353,7 @@ plot(as.numeric(mean_acumulados_f))
 
 
 
-### Matriz de cotizaciones
+## 4.10 Matriz de cotizaciones cot_f
 ```{r}
 den_cot_f<-rep(1,116)
 den_cot_f[1:length(mean_values_f)]<-unlist(mean_values_f)
@@ -380,12 +375,11 @@ for (x in 1:115) {
 }
 
 #cot_f[anno_proyeccion, edad_inicial] por ejemplo cuantas cotizaciones tiene una hombre de 50 dentro de dos annos:
-cot_f[,26]
+cot_f[,40]
 ```
 
-### Cotizaciones en los ultimos 2 o 4 anos:
 
-
+## 5.1 Cotizaciones en los ultimos 2(X) o 4(Y) anos:
 ```{r}
 V <- den_cot_f*12
 
@@ -415,18 +409,20 @@ Y
 ```
 
 
-# Creacion de matriz 3d para guardar las simulaciones
+## 5.2 Creacion de matriz 3d para guardar las simulaciones
 ```{r}
 simulaciones_f_9 <- array(0,dim = c(115,5,100))   #(proyec, estados, simulaciones)
 ```
 
-# Se hacen las simulaciones para hombres
+## 5.3 Proyeccion 1 Mujeres
 ```{r}
 for (s in 1:100) {
+  ## crea matriz vacia
+  matriz_esto_1 <- matrix(0, ncol = 5, nrow = 115) 
   
-  matriz_esto_1 <- matrix(0, ncol = 5, nrow = 115) ## crea matriz vacia
-
-  matriz_esto_1[1, ] <- as.numeric(poblacion_inicial[1, 1:5]) # llena la primera fila con la población inicial de 20 años
+  # llena la primera fila con la población inicial de 20 años
+  matriz_esto_1[1, ] <- as.numeric(poblacion_inicial_f[1, 1:5]) 
+  
   ynac <- 2023-20-1906
   for (i in 2:(115-20)) { 
 
@@ -460,7 +456,7 @@ for (s in 1:100) {
   for (j in 21:114) {
       
       matriz_esto_2 <- matrix(0, ncol = 5, nrow = 115) 
-      matriz_esto_2[1, ] <- as.numeric(poblacion_inicial[j-19, 1:5])
+      matriz_esto_2[1, ] <- as.numeric(poblacion_inicial_f[j-19, 1:5])
       ynac2 <- 2023-j-1906
       i=2
       while (i+j<=115) {
@@ -493,9 +489,8 @@ for (s in 1:100) {
         matriz_esto_2[i,]<-matriz_esto_2[115-j,]
         i<-i+1
       }
-      
-      matrizFinal_Estoca_9f <-  matrizFinal_Estoca_9f + matriz_esto_2   # suma las matrices
-      
+      # suma las matrices
+      matrizFinal_Estoca_9f <-  matrizFinal_Estoca_9f + matriz_esto_2   
     }
   
   # Rellena cada tercera dimensión con una simulación  
@@ -504,7 +499,7 @@ for (s in 1:100) {
 }
 ```
 
-# Esperanza de las simulaciones
+## 5.4 Esperanza de las simulaciones
 ```{r}
 # Creación de matriz de 2d para sacar esperanza de las simulaciones
 matriz_resumenEsperanza_f_9 <- array(0,dim = c(115,5)) 
@@ -515,7 +510,7 @@ for (i in 1:115) {
   }
 }
 ```
-## Grafico de las simulacioes
+## 5.5 Grafico de las simulacioes
 ```{r}
 df<-as.data.frame(unlist(matriz_resumenEsperanza_f_9))
 df$Year <- 1:nrow(df)
@@ -599,4 +594,110 @@ print(plot)
 ```
 
 
+
+
+
+## 6.1 Creacion de matriz 2d para guardar Esperanda de P2
+
+Hace Sim=1000 simulaciones para cada edad, luego suma todas las proyecciones para todas las edades y obtiene la "v2_matriz_resumenEsperanza_H_9" que es analoga a "matriz_resumenEsperanza_H_9"
+```{r}
+v2_matriz_resumenEsperanza_f_9<-array(0,dim = c(115,5))
+esperanza_matrizEdad_x<-array(0,dim = c(115,5,115))
+sim<-100
+```
+
+## 6.2 Proyeccion 2
+```{r}
+for (edad_x in 20:113) {
+  #aqui se guardan las simulaciones para la matriz de proyeccion de la edad_x
+  simulaciones<- array(0,dim = c(115,5,sim))
+  
+  for (s in 1:sim){ 
+    ## crea matriz vacia
+    matriz_esto_1 <- matrix(0, ncol = 5, nrow = 115) 
+    
+    # llena la primera fila con la población inicial de x años
+    matriz_esto_1[1, ] <- as.numeric(poblacion_inicial_f[edad_x-19, 1:5]) 
+    ynac <- 2023-edad_x-1906
+    
+    for (i in 2:(115-edad_x)) { 
+      
+      if(    (cot_f[i,edad_x] >= 180) 
+            || (X[i+edad_x] && (edad_x+i<48))
+            || (Y[i+edad_x] && (edad_x+i>=48))  ){
+          #A7 tienen derecho a invalidez y pueden morir
+          prob<-px[1, ynac, edad_x+i-1, 7, ]
+          
+          if((edad_x+i>=65)){
+            #A1 tienen derecho a invalidez, vejez y pueden sucesion
+              prob<-px[1, ynac, edad_x+i-1, 1, ]
+          }
+          
+          if (matriz_esto_1[i-1, 1] > 0) {
+              matriz_esto_1[i,] <- rmultinom(1, matriz_esto_1[i-1, 1], prob)
+          } else {
+              # Manejo del caso en que no hay población para simular
+              matriz_esto_1[i,] <- rep(0, 5)
+          }
+      
+      }else{
+          if (matriz_esto_1[i-1, 1] > 0) {
+              matriz_esto_1[i,]<- (rmultinom(1,matriz_esto_1[i-1,1], px[1, ynac, edad_x+i-1, 6, ]))
+          } else {
+              # Manejo del caso en que no hay población para simular
+              matriz_esto_1[i,] <- rep(0, 5)
+          }
+      }
+      
+      if (matriz_esto_1[i-1, 2] > 0) {
+      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,2], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
+        } 
+      if (matriz_esto_1[i-1, 3] > 0) {
+      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,3], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
+        }
+      if (matriz_esto_1[i-1, 4] > 0) {
+      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,4], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
+        } 
+      if (matriz_esto_1[i-1, 5] > 0) {
+      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,5], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
+        }  
+      
+    }
+    simulaciones[,,s]<- matriz_esto_1 #guarda "sim" simulaciones de la matriz de edad_x
+  }
+  
+    esperanzaEdad_x <- array(0,dim = c(115,5)) #saca la esperanza para matriz de edad_x
+    for (i in 1:115) {
+      for (j in 1:5) {
+        esperanzaEdad_x[i,j] <- mean(simulaciones[i,j,])
+      }
+    }
+    esperanza_matrizEdad_x[,,edad_x-19]<-esperanzaEdad_x
+    #suma para todas las edades
+    v2_matriz_resumenEsperanza_f_9<-v2_matriz_resumenEsperanza_f_9+esperanzaEdad_x
+    
+
+}
+esperanza_matrizEdad_x[,,1]
+
+```
+
+## 6.3 Grafico Proyeccion 2
+```{r}
+df<-as.data.frame(unlist(v2_matriz_resumenEsperanza_f_9))
+df$Year <- 1:nrow(df)
+
+# Convertir el data frame a formato largo (long format) para ggplot
+df_long <- df %>%
+  pivot_longer(cols = -Year, names_to = "State", values_to = "Value")
+
+# Crear el gráfico
+ggplot(df_long, aes(x = Year, y = Value, color = State)) +
+  geom_line() +
+  labs(title = "Comportamiento de los Estados a través del tiempo",
+       x = "Año",
+       y = "Poblacion",
+       color = "Estado") +
+  theme_minimal()
+```
 
