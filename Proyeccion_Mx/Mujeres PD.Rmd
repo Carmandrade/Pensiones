@@ -1,9 +1,11 @@
 ---
-title: "Proyeccion Demografica"
+
+title: "Mujeres PD"
 author: "Fondo B"
-date: "2024-06-10"
+date: "2024-06-22"
 output: html_document
 ---
+
 
 ```{r}
 library(readxl)
@@ -14,6 +16,7 @@ library(tidyverse)
 library(lubridate)
 library(ggplot2)
 library(dplyr)
+library(janitor)
 ```
 
 ## Matriz de  mortalidad qx
@@ -199,7 +202,7 @@ activos <- cbind(activos[,1:3] ,activos[,4:363] * inflacion, activos[,364:365])
 
 
 
-# Conteo de cotizaciones 
+# Conteo de cotizaciones y salarios
 
 ```{r, replace_na}
 # Function to replace zeros before the first non-zero number with NA
@@ -223,28 +226,35 @@ replace<- function(df){
 }
 ```
 
-### Separacion de la base activos en hom y muj
+### Separacion de la base activos en hom y muj para cotizaciones
 ```{r, separacion de base por sexo}
 #Convierte la matriz a 0 y 1s y llena de NAs las primeras filas
 df_transformado <- as.data.frame(lapply(activos[,4:363], function(x) ifelse(x > 10000, 1, 0)))
-
 activos_na<-replace(df_transformado)
+
 activos_final<-cbind(activos[,2:3], activos_na)
 act_mujeres<- activos_final[activos_final$Sexo=="F",]
 act_hombres<- activos_final[activos_final$Sexo=="M",]
 ```
 
+### Separacion de la base activos en hom y muj para salarios
+```{r, separacion de base por sexo}
+df_salarios<-replace(activos[,4:363])
+salarios_final<-cbind(activos[,2:3], df_salarios)
+sal_mujeres<- salarios_final[salarios_final$Sexo=="F",]
+sal_hombres<- salarios_final[salarios_final$Sexo=="M",]
+```
+
 ### Matriz de densidades de cotizaciones anuales por edad
 ```{r}
-library(lubridate)
-
 # Suponemos que 'df' es tu dataframe, con la primera columna como fecha de nacimiento
 # y las siguientes 360 columnas como los datos de cotización mensuales.
 
 # Asegúrate de que la fecha de nacimiento está en formato de fecha
-df_h<-act_hombres[,c(-2)]
+df_f<-act_mujeres[,c(-2)]
+sal_f<-sal_mujeres[,c(-2)]
 
-df_h$Fec.Nac <- as.Date(df_h$Fec.Nac, format = "%d-%m-%Y")
+df_f$Fec.Nac <- as.Date(df_f$Fec.Nac, format = "%d-%m-%Y")
 
 # Crear una secuencia de fechas desde el 31-01-1994 hasta el 31-12-2023
 fechas <- seq(as.Date("1994-01-01"), as.Date("2023-12-01"), by = "month")
@@ -254,110 +264,126 @@ fechas<- ceiling_date(fechas, "month") - days(1)
 
 
 # Calcular la matriz de edades para cada observación en cada punto temporal
-edades_h <- t(sapply(df_h$Fec.Nac, function(fecha_nac) {
+edades_f <- t(sapply(df_f$Fec.Nac, function(fecha_nac) {
   edad_meses <- interval(start = fecha_nac, end = fechas) %/% months(1)
   edad_anios <- edad_meses %/% 12
   return(edad_anios)
 }))
 
 # Preparar una matriz para guardar los promedios de cotización por edad
-max_edad_h <- max(edades_h, na.rm = TRUE)
+max_edad_f <- max(edades_f, na.rm = TRUE)
 
-matriz_promedios_h <- matrix(NA, nrow = nrow(df_h), ncol = max_edad + 1)
+matriz_promedios_f <- matrix(NA, nrow = nrow(df_f), ncol = max_edad + 1)
+sal_promedios_f <- matrix(NA, nrow = nrow(df_f), ncol = max_edad + 1)
        
 # Calcular promedios anuales de cotización por edad
-for (i in 1:nrow(df_h)) {
-  for (edad in 0:max_edad_h) {
-    indices <- which(edades_h[i,] == edad)
+for (i in 1:nrow(df_f)) {
+  for (edad in 0:max_edad_f) {
+    indices <- which(edades_f[i,] == edad)
     if (length(indices) > 0) {
-      datos_edad <- as.numeric(df_h[i, (indices + 1)])  # +1 porque la primera columna es fecha de nacimiento
+      datos_edad <- as.numeric(df_f[i, (indices + 1)])  # +1 porque la primera columna es fecha de nacimiento
+      sal_edad<- as.numeric(sal_f[i, (indices + 1)])
+      
       if (any(!is.na(datos_edad))) {
-        matriz_promedios_h[i, edad + 1] <- mean(datos_edad, na.rm = TRUE)  # +1 porque la matriz inicia en columna 1
+        matriz_promedios_f[i, edad + 1] <- mean(datos_edad, na.rm = TRUE)  # +1 porque la matriz inicia en columna 1
+        sal_promedios_f[i, edad + 1] <- mean(sal_edad, na.rm = TRUE)
       }
     }
   }
 }
 
-df_h_resultado <- as.data.frame(matriz_promedios_h)
-names(df_h_resultado) <- paste("Edad", 0:max_edad, sep="_")
+df_f_resultado <- as.data.frame(matriz_promedios_f)
+names(df_f_resultado) <- paste("Edad", 0:max_edad, sep="_")
+
+sal_f_resultado <- as.data.frame(sal_promedios_f)
+names(sal_f_resultado) <- paste("Edad", 0:max_edad, sep="_")
 ```
 
 ### Vector densidad de cotizacion anual por edad hombres
 ```{r}
-mean_values_h <- df_h_resultado %>%
+mean_values_f <- df_f_resultado %>%
   summarise(across(where(is.numeric), mean, na.rm = TRUE))
 
-mean_hom<-mean_values_h
+mean_muj<-mean_values_f
 ```
 
-### Matriz acumuladas por edad hombres
+### Vector salario anual promedio por edad mujeres
 ```{r}
-matriz_acumuladas_h <- matrix(NA, nrow = nrow(df_h), ncol = max_edad + 1)
+sal_mean_f <- sal_f_resultado %>%
+  summarise(across(where(is.numeric), mean, na.rm = TRUE))
+
+sal_mean_muj<-sal_mean_f
+plot(as.numeric(sal_mean_muj))
+```
+
+### Matriz acumuladas por edad mujeres
+```{r}
+matriz_acumuladas_f <- matrix(NA, nrow = nrow(df_f), ncol = max_edad + 1)
 
 # Calcular las cotizaciones acumuladas por edad
-for (i in 1:nrow(df_h)) {
-  for (edad in 0:edades_h[i,length(edades_h[i,])]) {
-    indices <- which(edades_h[i, ] <= edad)
+for (i in 1:nrow(df_f)) {
+  for (edad in 0:edades_f[i,length(edades_f[i,])]) {
+    indices <- which(edades_f[i, ] <= edad)
     if (length(indices) > 0) {
-      datos_acumulados_h <- as.numeric(df_h[i, (indices + 1)])  # +1 porque la primera columna es fecha de nacimiento 
-      if (any(!is.na(datos_acumulados_h))) {
-        matriz_acumuladas_h[i, edad + 1] <- sum(datos_acumulados_h, na.rm = TRUE)  # +1 porque la matriz inicia en columna 1
+      datos_acumulados_f <- as.numeric(df_f[i, (indices + 1)])  # +1 porque la primera columna es fecha de nacimiento 
+      if (any(!is.na(datos_acumulados_f))) {
+        matriz_acumuladas_f[i, edad + 1] <- sum(datos_acumulados_f, na.rm = TRUE)  # +1 porque la matriz inicia en columna 1
       }
     }
   }
 }
 
 
-df_h_resultado_acumuladas <- as.data.frame(matriz_acumuladas_h)
-names(df_h_resultado_acumuladas) <- paste("Edad", 0:max_edad_h, sep = "_")
+df_f_resultado_acumuladas <- as.data.frame(matriz_acumuladas_f)
+names(df_f_resultado_acumuladas) <- paste("Edad", 0:max_edad_f, sep = "_")
 
-print(df_h_resultado_acumuladas)
+print(df_f_resultado_acumuladas)
 ```
 
 ### Vector de cotizaciones acumuladas por edad hombres
 ```{r}
-library(janitor)
-
 # Clean column names
-df_h_resultado_acumuladas <- df_h_resultado_acumuladas %>%
+df_f_resultado_acumuladas <- df_f_resultado_acumuladas %>%
   clean_names()
 
 # Calculate the mean of numeric columns
-mean_acumulados_h <- df_h_resultado_acumuladas %>%
+mean_acumulados_f <- df_f_resultado_acumuladas %>%
   summarise(across(where(is.numeric), ~ mean(.x, na.rm = TRUE)))
 
-mean_acumulados_h
+mean_acumulados_f
+plot(as.numeric(mean_acumulados_f))
 ```
 
 
 
 ### Matriz de cotizaciones
 ```{r}
-den_cot_h<-rep(1,115)
-den_cot_h[1:length(mean_values_h)]<-unlist(mean_values_h)
-den_cot_h[74:116]<-1
+den_cot_f<-rep(1,115)
+den_cot_f[1:length(mean_values_f)]<-unlist(mean_values_f)
+den_cot_f[74:116]<-1
 
-mean_cot_h<-unlist(mean_acumulados_h)
-mean_cot_h[74:116]<-180
-cot_h <- array(0, dim=c(115,115))
+mean_cot_f<-unlist(mean_acumulados_f)
+mean_cot_f[72:116]<-180
 
+cot_f <- array(0, dim=c(115,115))
 
 for (edad in 1:115) {
-  cot_h[1,edad]<-mean_cot_h[edad]
+  cot_f[1,edad]<-mean_cot_f[edad]
   for (i in 2:(115-i)) {
-    cot_h[i,edad]<-cot_h[i-1,edad]+den_cot_h[edad]*12
+    cot_f[i,edad]<-cot_f[i-1,edad]+den_cot_f[edad]*12
+    if(edad==40){cat(i," ",edad," ",cot_f[i,edad])}
   }
 }
 
-#cot_h[anno_proyeccion, edad_inicial] por ejemplo cuantas cotizaciones tiene una hombre de 50 dentro de dos annos:
-cot_h[2,50]
+#cot_f[anno_proyeccion, edad_inicial] por ejemplo cuantas cotizaciones tiene una hombre de 50 dentro de dos annos:
+cot_f[,40]
 ```
 
 ### Cotizaciones en los ultimos 2 o 4 anos:
 
 
 ```{r}
-V <- den_cot_h*12
+V <- den_cot_f*12
 
 X <- rep(0, length(V))
 Y <- rep(0, length(V))
@@ -384,11 +410,19 @@ Y
 
 ```
 
+
+
+```{r}
+cot_f[,39]
+sal_mean_f[15:40]
+```
+
+
 #### Hombres
 
 # Creacion de matriz 3d para guardar las simulaciones
 ```{r}
-simulaciones_H_9 <- array(0,dim = c(115,5,100))   #(proyec, estados, simulaciones)
+simulaciones_f_9 <- array(0,dim = c(115,5,100))   #(proyec, estados, simulaciones)
 ```
 
 # Se hacen las simulaciones para hombres
@@ -401,7 +435,7 @@ for (s in 1:100) {
   ynac <- 2023-20-1906
   for (i in 2:(115-20)) { 
 
-    if(    (cot_h[i,20] >= 180) 
+    if(    (cot_f[i,20] >= 180) 
           || (X[i+20] && (20+i<48))
           || (Y[i+20] && (20+i>=48))  ){
         #A7 tienen derecho a invalidez y pueden morir
@@ -412,7 +446,7 @@ for (s in 1:100) {
             prob<-px[1, ynac, 20+i-2 +1, 1, ]
         }
         
-        matriz_esto_2[i,]<- (rmultinom(1,matriz_esto_2[i-1,1], prob)) 
+        matriz_esto_1[i,]<- (rmultinom(1,matriz_esto_2[i-1,1], prob)) 
     
     }else{
         matriz_esto_1[i,]<- (rmultinom(1,matriz_esto_1[i-1,1], px[1, ynac, 20+i-2 +1, 6, ]))
@@ -435,7 +469,7 @@ for (j in 21:114) {
     ynac2 <- 2023-j-1906
     i=2
     while (i+j<=115) {
-      if(    (cot_h[i,j] >= 180) 
+      if(    (cot_f[i,j] >= 180) 
           || (X[i+j] && (j+i<48))
           || (Y[i+j] && (j+i>=48))  ){
         #A7 tienen derecho a invalidez y pueden morir
@@ -466,7 +500,7 @@ for (j in 21:114) {
   }
   
   # Rellena cada tercera dimensión con una simulación  
-  simulaciones_H_9[,,s] <- matrizFinal_Estoca_9H
+  simulaciones_f_9[,,s] <- matrizFinal_Estoca_9H
   
 }
 ```
@@ -477,11 +511,11 @@ for (j in 21:114) {
 # Esperanza de las simulaciones
 ```{r}
 # Creación de matriz de 2d para sacar esperanza de las simulaciones
-matriz_resumenEsperanza_H_9 <- array(0,dim = c(115,5)) 
+matriz_resumenEsperanza_f_9 <- array(0,dim = c(115,5)) 
 
 for (i in 1:115) {
   for (j in 1:5) {
-    matriz_resumenEsperanza_H_9[i,j] <- round(mean(simulaciones_H_9[i,j,]))
+    matriz_resumenEsperanza_f_9[i,j] <- round(mean(simulaciones_f_9[i,j,]))
     
   }
   
@@ -490,7 +524,7 @@ for (i in 1:115) {
 
 
 ```{r}
-df<-as.data.frame(unlist(matriz_resumenEsperanza_H_9))
+df<-as.data.frame(unlist(matriz_resumenEsperanza_f_9))
 df$Year <- 1:nrow(df)
 
 # Convertir el data frame a formato largo (long format) para ggplot
@@ -506,56 +540,6 @@ ggplot(df_long, aes(x = Year, y = Value, color = State)) +
        color = "Estado") +
   theme_minimal()
 ```
-
-
-## Calculos de mujeres
-
-```{r}
-
-df_f<-act_mujeres[,c(-2)]
-df_f$Fec.Nac <- as.Date(df_f$Fec.Nac, format = "%d-%m-%Y")
-
-fechas <- seq(as.Date("1994-01-01"), as.Date("2023-12-01"), by = "month")
-fechas <- ceiling_date(fechas, "month") - days(1)
-
-# Calcular la matriz de edades_f para cada observación en cada punto temporal
-edades_f <- t(sapply(df_f$Fec.Nac, function(fecha_nac) {
-  edad_meses <- interval(start = fecha_nac, end = fechas) %/% months(1)
-  edad_anios <- edad_meses %/% 12
-  return(edad_anios)
-}))
-
-# Preparar una matriz para guardar los promedios de cotización por edad
-max_edad_f <- max(edades_f, na.rm = TRUE)
-
-matriz_promedios_f <- matrix(NA, nrow = nrow(df_f), ncol = max_edad + 1)
-
-# Calcular promedios anuales de cotización por edad
-for (i in 1:nrow(df_f)) {
-  for (edad in 0:max_edad_f) {
-    indices <- which(edades_f[i,] == edad)
-    if (length(indices) > 0) {
-      datos_edad <- as.numeric(df_f[i, (indices + 1)])  # +1 porque la primera columna es fecha de nacimiento
-      if (any(!is.na(datos_edad))) {
-        matriz_promedios_f[i, edad + 1] <- mean(datos_edad, na.rm = TRUE)  # +1 porque la matriz inicia en columna 1
-      }
-    }
-  }
-}
-
-# Opcional: convertir la matriz en un dataframe para mejor manejo o visualización
-df_f_resultado <- as.data.frame(matriz_promedios_f)
-names(df_f_resultado) <- paste("Edad", 0:max_edad, sep="_")
-
-# Imprimir o retornar el dataframe resultado
-print(df_f_resultado)
-
-mean_f_values <- df_f_resultado %>%
-  summarise(across(where(is.numeric), mean, na.rm = TRUE))
-
-mean_muj<-mean_f_values
-```
-#### Matriz acumuladas mujeres ??
 
 
 ### Grafico densidad de cotizacion
@@ -619,5 +603,6 @@ plot <- ggplot(data = df, aes(x = Age)) +  # Initialize the plot with data and x
 # Display the plot
 print(plot)
 ```
+
 
 
