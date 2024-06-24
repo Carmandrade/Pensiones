@@ -516,7 +516,7 @@ write.csv(matriz_resumenEsperanza_H_9, "H_ProyeccionDemografica_1.csv")
 ## 5.5 Grafico de las simulaciones
 ```{r}
 df <- as.data.frame(matriz_resumenEsperanza_H_9)
-colnames(df) <- c("activo", "invalidez", "sucesion", "vejez", "muerte")
+colnames(df) <- c("activo", "invalidez",  "vejez","sucesion", "muerte")
 df$Year <- 1:nrow(df)
 
 # Convertir el data frame a formato largo (long format) para ggplot
@@ -631,7 +631,7 @@ esperanza_matrizEdad_x[,,3]
 
 ```{r}
 df <- as.data.frame(v2_matriz_resumenEsperanza_H_9)
-colnames(df) <- c("activo", "invalidez", "sucesion", "vejez", "muerte")
+colnames(df) <- c("activo", "invalidez",  "vejez","sucesion", "muerte")
 df$Year <- 1:nrow(df)
 
 # Convertir el data frame a formato largo (long format) para ggplot

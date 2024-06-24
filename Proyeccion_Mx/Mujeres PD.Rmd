@@ -515,6 +515,7 @@ for (i in 1:115) {
 ## 5.5 Grafico de las simulacioes
 ```{r}
 df<-as.data.frame(unlist(matriz_resumenEsperanza_f_9))
+colnames(df) <- c("activo", "invalidez",  "vejez","sucesion", "muerte")
 df$Year <- 1:nrow(df)
 
 # Convertir el data frame a formato largo (long format) para ggplot
@@ -624,7 +625,7 @@ f_esperanza_matrizEdad_x[,,3]
 ## 6.3 Grafico Proyeccion 2
 ```{r}
 df<-as.data.frame(unlist(v2_matriz_resumenEsperanza_F_9))
-colnames(df) <- c("activo", "invalidez", "sucesion", "vejez", "muerte")
+colnames(df) <- c("activo", "invalidez",  "vejez","sucesion", "muerte")
 df$Year <- 1:nrow(df)
 
 # Convertir el data frame a formato largo (long format) para ggplot
@@ -710,7 +711,7 @@ print(plot)
 ```{r}
 pd<-v2_matriz_resumenEsperanza_F_9+v2_matriz_resumenEsperanza_H_9
 df<-as.data.frame(unlist(pd))
-colnames(df) <- c("activo", "invalidez", "sucesion", "vejez", "muerte")
+colnames(df) <- c("activo", "invalidez",  "vejez","sucesion", "muerte")
 df$Year <- 1:nrow(df)
 
 # Convertir el data frame a formato largo (long format) para ggplot
