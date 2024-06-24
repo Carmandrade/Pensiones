@@ -18,6 +18,7 @@ library(dplyr)
 library(janitor)
 ```
 
+
 ## 2.1 Matriz de  mortalidad qx
 Se carga la tabla dinamica de mortalidad de la SUPEN
 ```{r}
@@ -154,17 +155,17 @@ px[2, 2003-1906,20,7,]
 
 
 
+
 ## 3. Poblacion inicial para la proyeccion demografica
 Se omiten las pensiones por orfandad, es decir la proyeccion comienza para las personas activas de 20 años
 ```{r}
 poblacion_f<- read.csv("Poblacion_muj.csv")
-poblacion_activo_inv_vejez<-poblacion_f[21:116,-c(1,2,4)]
+poblacion_f<-poblacion_f[21:116,-c(1,2)]
+poblacion_inicial_f<- cbind(poblacion_f[,1:2], poblacion_f[,4],poblacion_f[,3], poblacion_f[,5])
 
-poblacion_inicial_f<- cbind(poblacion_activo_inv_vejez, poblacion[21:116,4])
-
-colnames(poblacion_inicial_f)<- c("activo", "invalidez", "vejez", "sucesion", "muerte")
 head(poblacion_inicial_f)
 ```
+
 
 
 ## 4.1 Salarios
@@ -379,6 +380,7 @@ cot_f[,40]
 ```
 
 
+
 ## 5.1 Cotizaciones en los ultimos 2(X) o 4(Y) anos:
 ```{r}
 V <- den_cot_f*12
@@ -530,6 +532,114 @@ ggplot(df_long, aes(x = Year, y = Value, color = State)) +
 ```
 
 
+## 6.1 Creacion de matriz 2d para guardar Esperanda de P2
+
+Hace Sim=1000 simulaciones para cada edad, luego suma todas las proyecciones para todas las edades y obtiene la "v2_matriz_resumenEsperanza_F_9" que es analoga a "matriz_resumenEsperanza_H_9"
+```{r}
+v2_matriz_resumenEsperanza_F_9<-array(0,dim = c(115,5))
+f_esperanza_matrizEdad_x<-array(0,dim = c(115,5,115))
+sim<-1000
+```
+
+## 6.2 Proyeccion 2
+```{r}
+for (edad_x in 20:113) {
+  #aqui se guardan las simulaciones para la matriz de proyeccion de la edad_x
+  simulaciones<- array(0,dim = c(115,5,sim))
+  
+  for (s in 1:sim){ 
+    ## crea matriz vacia
+    matriz_esto_1 <- matrix(0, ncol = 5, nrow = 115) 
+    
+    # llena la primera fila con la población inicial de x años
+    matriz_esto_1[1, ] <- as.numeric(poblacion_inicial_f[edad_x-19, 1:5]) 
+    ynac <- 2023-edad_x-1906
+    
+    for (i in 2:(115-edad_x)) { 
+      
+      if(    (cot_f[i,edad_x] >= 180) 
+            || (X[i+edad_x] && (edad_x+i<48))
+            || (Y[i+edad_x] && (edad_x+i>=48))  ){
+          #A7 tienen derecho a invalidez y pueden morir
+          prob<-px[2, ynac, edad_x+i-1, 7, ]
+          
+          if((edad_x+i>=65)){
+            #A1 tienen derecho a invalidez, vejez y pueden sucesion
+              prob<-px[2, ynac, edad_x+i-1, 1, ]
+          }
+          
+          if (matriz_esto_1[i-1, 1] > 0) {
+              matriz_esto_1[i,] <- rmultinom(1, matriz_esto_1[i-1, 1], prob)
+          } else {
+              # Manejo del caso en que no hay población para simular
+              matriz_esto_1[i,] <- rep(0, 5)
+          }
+      
+      }else{
+          if (matriz_esto_1[i-1, 1] > 0) {
+              matriz_esto_1[i,]<- (rmultinom(1,matriz_esto_1[i-1,1], px[2, ynac, edad_x+i-1, 6, ]))
+          } else {
+              # Manejo del caso en que no hay población para simular
+              matriz_esto_1[i,] <- rep(0, 5)
+          }
+      }
+      
+      if (matriz_esto_1[i-1, 2] > 0) {
+      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,2], px[2, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
+        } 
+      if (matriz_esto_1[i-1, 3] > 0) {
+      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,3], px[2, ynac, edad_x+i-2+1, 3, ])) + matriz_esto_1[i,]
+        }
+      if (matriz_esto_1[i-1, 4] > 0) {
+      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,4], px[2, ynac, edad_x+i-2+1, 4, ])) + matriz_esto_1[i,]
+        } 
+      if (matriz_esto_1[i-1, 5] > 0) {
+      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,5], px[2, ynac, edad_x+i-2+1, 5, ])) + matriz_esto_1[i,]
+        }  
+      
+    }
+    
+    for (i in (115-edad_x):115) {
+        matriz_esto_1[i,]<-matriz_esto_1[115-edad_x,]
+        i<-i+1
+      }
+    simulaciones[,,s]<- matriz_esto_1 #guarda "sim" simulaciones de la matriz de edad_x
+  }
+  
+    esperanzaEdad_x <- array(0,dim = c(115,5)) #saca la esperanza para matriz de edad_x
+    for (i in 1:115) {
+      for (j in 1:5) {
+        esperanzaEdad_x[i,j] <- round(mean(simulaciones[i,j,]))
+      }
+    }
+    f_esperanza_matrizEdad_x[,,edad_x-19]<-esperanzaEdad_x
+    #suma para todas las edades
+    v2_matriz_resumenEsperanza_F_9<-v2_matriz_resumenEsperanza_F_9+esperanzaEdad_x
+    
+
+}
+f_esperanza_matrizEdad_x[,,3]
+```
+
+## 6.3 Grafico Proyeccion 2
+```{r}
+df<-as.data.frame(unlist(v2_matriz_resumenEsperanza_F_9))
+colnames(df) <- c("activo", "invalidez", "sucesion", "vejez", "muerte")
+df$Year <- 1:nrow(df)
+
+# Convertir el data frame a formato largo (long format) para ggplot
+df_long <- df %>%
+  pivot_longer(cols = -Year, names_to = "State", values_to = "Value")
+
+# Crear el gráfico
+ggplot(df_long, aes(x = Year, y = Value, color = State)) +
+  geom_line() +
+  labs(title = "Comportamiento de los Estados a través del tiempo",
+       x = "Año",
+       y = "Poblacion",
+       color = "Estado") +
+  theme_minimal()
+```
 
 ### Grafico densidad de cotizacion
 ```{r}
@@ -596,95 +706,11 @@ print(plot)
 
 
 
-
-## 6.1 Creacion de matriz 2d para guardar Esperanda de P2
-
-Hace Sim=1000 simulaciones para cada edad, luego suma todas las proyecciones para todas las edades y obtiene la "v2_matriz_resumenEsperanza_H_9" que es analoga a "matriz_resumenEsperanza_H_9"
+## 7.3 Grafico Proyeccion Hombres y mujeres v2
 ```{r}
-v2_matriz_resumenEsperanza_f_9<-array(0,dim = c(115,5))
-esperanza_matrizEdad_x<-array(0,dim = c(115,5,115))
-sim<-100
-```
-
-## 6.2 Proyeccion 2
-```{r}
-for (edad_x in 20:113) {
-  #aqui se guardan las simulaciones para la matriz de proyeccion de la edad_x
-  simulaciones<- array(0,dim = c(115,5,sim))
-  
-  for (s in 1:sim){ 
-    ## crea matriz vacia
-    matriz_esto_1 <- matrix(0, ncol = 5, nrow = 115) 
-    
-    # llena la primera fila con la población inicial de x años
-    matriz_esto_1[1, ] <- as.numeric(poblacion_inicial_f[edad_x-19, 1:5]) 
-    ynac <- 2023-edad_x-1906
-    
-    for (i in 2:(115-edad_x)) { 
-      
-      if(    (cot_f[i,edad_x] >= 180) 
-            || (X[i+edad_x] && (edad_x+i<48))
-            || (Y[i+edad_x] && (edad_x+i>=48))  ){
-          #A7 tienen derecho a invalidez y pueden morir
-          prob<-px[1, ynac, edad_x+i-1, 7, ]
-          
-          if((edad_x+i>=65)){
-            #A1 tienen derecho a invalidez, vejez y pueden sucesion
-              prob<-px[1, ynac, edad_x+i-1, 1, ]
-          }
-          
-          if (matriz_esto_1[i-1, 1] > 0) {
-              matriz_esto_1[i,] <- rmultinom(1, matriz_esto_1[i-1, 1], prob)
-          } else {
-              # Manejo del caso en que no hay población para simular
-              matriz_esto_1[i,] <- rep(0, 5)
-          }
-      
-      }else{
-          if (matriz_esto_1[i-1, 1] > 0) {
-              matriz_esto_1[i,]<- (rmultinom(1,matriz_esto_1[i-1,1], px[1, ynac, edad_x+i-1, 6, ]))
-          } else {
-              # Manejo del caso en que no hay población para simular
-              matriz_esto_1[i,] <- rep(0, 5)
-          }
-      }
-      
-      if (matriz_esto_1[i-1, 2] > 0) {
-      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,2], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
-        } 
-      if (matriz_esto_1[i-1, 3] > 0) {
-      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,3], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
-        }
-      if (matriz_esto_1[i-1, 4] > 0) {
-      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,4], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
-        } 
-      if (matriz_esto_1[i-1, 5] > 0) {
-      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,5], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
-        }  
-      
-    }
-    simulaciones[,,s]<- matriz_esto_1 #guarda "sim" simulaciones de la matriz de edad_x
-  }
-  
-    esperanzaEdad_x <- array(0,dim = c(115,5)) #saca la esperanza para matriz de edad_x
-    for (i in 1:115) {
-      for (j in 1:5) {
-        esperanzaEdad_x[i,j] <- mean(simulaciones[i,j,])
-      }
-    }
-    esperanza_matrizEdad_x[,,edad_x-19]<-esperanzaEdad_x
-    #suma para todas las edades
-    v2_matriz_resumenEsperanza_f_9<-v2_matriz_resumenEsperanza_f_9+esperanzaEdad_x
-    
-
-}
-esperanza_matrizEdad_x[,,1]
-
-```
-
-## 6.3 Grafico Proyeccion 2
-```{r}
-df<-as.data.frame(unlist(v2_matriz_resumenEsperanza_f_9))
+pd<-v2_matriz_resumenEsperanza_F_9+v2_matriz_resumenEsperanza_H_9
+df<-as.data.frame(unlist(pd))
+colnames(df) <- c("activo", "invalidez", "sucesion", "vejez", "muerte")
 df$Year <- 1:nrow(df)
 
 # Convertir el data frame a formato largo (long format) para ggplot
@@ -700,4 +726,3 @@ ggplot(df_long, aes(x = Year, y = Value, color = State)) +
        color = "Estado") +
   theme_minimal()
 ```
-

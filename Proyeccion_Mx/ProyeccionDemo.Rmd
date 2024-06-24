@@ -159,11 +159,10 @@ px[2, 2003-1906,20,7,]
 Se omiten las pensiones por orfandad, es decir la proyeccion comienza para las personas activas de 20 años
 ```{r}
 poblacion_h<- read.csv("Poblacion_hom.csv")
-poblacion_activo_inv_vejez<-poblacion_h[21:116,-c(1,2,4)]
-
-poblacion_inicial_h<- cbind(poblacion_activo_inv_vejez, poblacion[21:116,4])
+poblacion_h<-poblacion_h[21:116,-c(1,2)]
+poblacion_inicial_h<- cbind(poblacion_h[,1:2], poblacion_h[,4],poblacion_h[,3], poblacion_h[,5])
 poblacion_inicial_h[1,1]<-1
-colnames(poblacion_inicial_h)<- c("activo", "invalidez", "vejez", "sucesion", "muerte")
+
 head(poblacion_inicial_h)
 ```
 
@@ -412,11 +411,13 @@ Y
 ## 5.2 Creacion de matriz 3d para guardar las simulaciones
 ```{r}
 simulaciones_H_9 <- array(0,dim = c(115,5,100))   #(proyec, estados, simulaciones)
+sim<-1000
 ```
+
 
 ## 5.3 Proyeccion 1 Hombres
 ```{r}
-for (s in 1:100) {
+for (s in 1:sim) {
   ## crea matriz vacia
   matriz_esto_1 <- matrix(0, ncol = 5, nrow = 115) 
   
@@ -508,10 +509,14 @@ for (i in 1:115) {
     matriz_resumenEsperanza_H_9[i,j] <- round(mean(simulaciones_H_9[i,j,]))
   }
 }
+
+write.csv(matriz_resumenEsperanza_H_9, "H_ProyeccionDemografica_1.csv")
 ```
-## 5.5 Grafico de las simulacioes
+
+## 5.5 Grafico de las simulaciones
 ```{r}
-df<-as.data.frame(unlist(matriz_resumenEsperanza_H_9))
+df <- as.data.frame(matriz_resumenEsperanza_H_9)
+colnames(df) <- c("activo", "invalidez", "sucesion", "vejez", "muerte")
 df$Year <- 1:nrow(df)
 
 # Convertir el data frame a formato largo (long format) para ggplot
@@ -530,13 +535,14 @@ ggplot(df_long, aes(x = Year, y = Value, color = State)) +
 
 
 
+
 ## 6.1 Creacion de matriz 2d para guardar Esperanda de P2
 
 Hace Sim=1000 simulaciones para cada edad, luego suma todas las proyecciones para todas las edades y obtiene la "v2_matriz_resumenEsperanza_H_9" que es analoga a "matriz_resumenEsperanza_H_9"
 ```{r}
 v2_matriz_resumenEsperanza_H_9<-array(0,dim = c(115,5))
 esperanza_matrizEdad_x<-array(0,dim = c(115,5,115))
-sim<-100
+sim<-1000
 ```
 
 ## 6.2 Proyeccion 2
@@ -586,23 +592,28 @@ for (edad_x in 20:113) {
       matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,2], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
         } 
       if (matriz_esto_1[i-1, 3] > 0) {
-      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,3], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
+      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,3], px[1, ynac, edad_x+i-2+1, 3, ])) + matriz_esto_1[i,]
         }
       if (matriz_esto_1[i-1, 4] > 0) {
-      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,4], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
+      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,4], px[1, ynac, edad_x+i-2+1, 4, ])) + matriz_esto_1[i,]
         } 
       if (matriz_esto_1[i-1, 5] > 0) {
-      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,5], px[1, ynac, edad_x+i-2+1, 2, ])) + matriz_esto_1[i,]
+      matriz_esto_1[i,]<-(rmultinom(1,matriz_esto_1[i-1,5], px[1, ynac, edad_x+i-2+1, 5, ])) + matriz_esto_1[i,]
         }  
       
     }
+    
+    for (i in (115-edad_x):115) {
+        matriz_esto_1[i,]<-matriz_esto_1[115-edad_x,]
+        i<-i+1
+      }
     simulaciones[,,s]<- matriz_esto_1 #guarda "sim" simulaciones de la matriz de edad_x
   }
   
     esperanzaEdad_x <- array(0,dim = c(115,5)) #saca la esperanza para matriz de edad_x
     for (i in 1:115) {
       for (j in 1:5) {
-        esperanzaEdad_x[i,j] <- mean(simulaciones[i,j,])
+        esperanzaEdad_x[i,j] <- round(mean(simulaciones[i,j,]))
       }
     }
     esperanza_matrizEdad_x[,,edad_x-19]<-esperanzaEdad_x
@@ -611,13 +622,16 @@ for (edad_x in 20:113) {
     
 
 }
-esperanza_matrizEdad_x[,,1]
+write.csv(v2_matriz_resumenEsperanza_H_9, "H_ProyeccionDemografica_2.csv")
 
+esperanza_matrizEdad_x[,,3]
 ```
 
 ## 6.3 Grafico Proyeccion 2
+
 ```{r}
-df<-as.data.frame(unlist(v2_matriz_resumenEsperanza_H_9))
+df <- as.data.frame(v2_matriz_resumenEsperanza_H_9)
+colnames(df) <- c("activo", "invalidez", "sucesion", "vejez", "muerte")
 df$Year <- 1:nrow(df)
 
 # Convertir el data frame a formato largo (long format) para ggplot
@@ -633,6 +647,10 @@ ggplot(df_long, aes(x = Year, y = Value, color = State)) +
        color = "Estado") +
   theme_minimal()
 ```
+
+
+
+
 
 # 7 Correr los dos codigos para Graficar esto:
 
