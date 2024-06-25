@@ -1,0 +1,49 @@
+# Proyección de salarios mínimos
+```{r}
+# Salario inicial anualizado
+# Inflaciones anualizadas en decimales
+
+proyectar_salario <- function(salario_inicial, inflacion_actual, años = 115, inflacion_min = 0.025, inflacion_max = 0.05, simulaciones=100) {
+  
+#Simulaciones estocasticas  
+matriz_simulacion <- array(0, dim= c(años, simulaciones)) 
+for(j in 1:simulaciones){
+  
+  
+  # Vector para almacenar los salarios
+  salarios_minimos <- c()
+  salarios_minimos[1] <- salario_inicial
+  
+  # Generar la inflación y calcular los salarios
+  for (i in 2:años) {
+    while(TRUE) {
+      ajuste <- runif(1, -0.5, 0.5) # Variacion aleatoria pequeña de la inflacion
+      inflacion <- inflacion_actual + ajuste
+      if(inflacion >= inflacion_min && inflacion <= inflacion_max) {
+        break
+      }
+    }
+    salarios_minimos[i] <- salarios_minimos[i-1] * (1 + inflacion)
+    inflacion_actual <- inflacion  # Actualiza la inflación actual para el siguiente año
+  }
+  
+ 
+  matriz_simulacion[,j] <- salarios_minimos # Llena cada columna con una simulacion de salarios proyectados
+  
+}
+
+#matriz esperanza de salarios minimos
+matriz_espe_SM <- array(0, dim = c(años, 1))
+    for (i in 1:115) {
+        matriz_espe_SM[i] <- mean(matriz_simulacion[i,])
+        
+    }
+
+return(matriz_espe_SM)
+}
+
+
+
+#proyectar_salario(150000, 0.025, inflacion_min =  0.02, inflacion_max =  0.04)
+  
+```
