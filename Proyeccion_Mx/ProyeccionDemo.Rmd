@@ -45,9 +45,9 @@ for(i in seq_len(nrow(df))) {
   edad_idx <- as.integer(row$edad) - min_edad + 1
   qx[sex_idx, ynac_idx, edad_idx] <- as.numeric(row$qx)
 }
-
+edad<-3
 #qx[sexo, ynac- min_yac+1, edad-min_edad + 1]
-qx[1, 1935 - min_ynac + 1, 88 - min_edad + 1]
+qx[2, 2024-edad - min_ynac + 1, edad - min_edad + 1]
 ```
 
 ## 2.2 Matriz de Invalidez
@@ -250,7 +250,7 @@ sal_hombres<- salarios_final[salarios_final$Sexo=="M",]
 
 # Asegúrate de que la fecha de nacimiento está en formato de fecha
 df_h<-act_hombres[,c(-2)]
-sal_h<-act_hombres[,c(-2)]
+sal_h<-sal_hombres[,c(-2)]
 
 df_h$Fec.Nac <- as.Date(df_h$Fec.Nac, format = "%d-%m-%Y")
 
@@ -410,8 +410,8 @@ Y
 
 ## 5.2 Creacion de matriz 3d para guardar las simulaciones
 ```{r}
-simulaciones_H_9 <- array(0,dim = c(115,5,100))   #(proyec, estados, simulaciones)
 sim<-1000
+simulaciones_H_9 <- array(0,dim = c(115,5,sim))   #(proyec, estados, simulaciones)
 ```
 
 
@@ -451,10 +451,9 @@ for (s in 1:sim) {
   } 
   
   matrizFinal_Estoca_9H <- matriz_esto_1 
-
+ 
     
   for (j in 21:114) {
-      
       matriz_esto_2 <- matrix(0, ncol = 5, nrow = 115) 
       matriz_esto_2[1, ] <- as.numeric(poblacion_inicial_h[j-19, 1:5])
       ynac2 <- 2023-j-1906
@@ -492,10 +491,9 @@ for (s in 1:sim) {
       # suma las matrices
       matrizFinal_Estoca_9H <-  matrizFinal_Estoca_9H + matriz_esto_2 
     }
-  
+ 
   # Rellena cada tercera dimensión con una simulación  
   simulaciones_H_9[,,s] <- matrizFinal_Estoca_9H
-  
 }
 ```
 
@@ -533,6 +531,41 @@ ggplot(df_long, aes(x = Year, y = Value, color = State)) +
   theme_minimal()
 ```
 
+
+```{r}
+df<-as.data.frame(unlist(matriz_resumenEsperanza_H_9[,-5]))
+
+df$Año <- 2024:(2024 + nrow(df) - 1)
+
+colnames(df) <- c("Activos",  "Invalidez","Vejez", "Sucesión", "Año")
+df_long <- df %>%
+  pivot_longer(cols = -Año, names_to = "Estado", values_to = "Proyección")
+
+ggplot(df_long, aes(x = Año, y = Proyección, color = Estado)) +
+  geom_line(size = 1) +
+  scale_y_continuous(labels = scales::comma) +
+  scale_x_continuous(breaks = seq(2024, 2124, by = 10)) +
+  labs(
+    x = "Año",
+    y = "Proyección",
+    color = "Estado"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14),
+    axis.text = element_text(size = 10),
+    axis.title = element_text(size = 12),
+    panel.grid.major.x = element_blank(), # Remove vertical grid lines
+    panel.grid.minor.x = element_blank(), # Remove minor vertical grid lines
+    panel.grid.major.y = element_line(color = "gray", size = 0.5), # Keep horizontal grid lines
+    panel.grid.minor.y = element_line(color = "gray", size = 0.5),  # Keep minor horizontal grid lines
+    legend.position = "top", # Position the legend at the top
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  ) +
+  scale_color_manual(values = c("Activos" = "blue", "Vejez" = "orange", "Invalidez" = "green", "Sucesión" = "red"))
+
+```
 
 
 
@@ -617,6 +650,7 @@ for (edad_x in 20:113) {
       }
     }
     esperanza_matrizEdad_x[,,edad_x-19]<-esperanzaEdad_x
+  
     #suma para todas las edades
     v2_matriz_resumenEsperanza_H_9<-v2_matriz_resumenEsperanza_H_9+esperanzaEdad_x
     
@@ -624,8 +658,30 @@ for (edad_x in 20:113) {
 }
 write.csv(v2_matriz_resumenEsperanza_H_9, "H_ProyeccionDemografica_2.csv")
 
-esperanza_matrizEdad_x[,,3]
+esperanza_matrizEdad_x[1,1,1]*sal_mean_h[3+19+10]
 ```
+## Masa Salarial y cotizaciones por año de proyeccion
+```{r}
+
+masa_Edad_x<- array(0, dim = c(115,115))
+masa_anual<- array(0, dim = c(115))
+cotizaciones_anual<- array(0, dim = c(115))
+sal_mean_h[73:116]<-0
+porcentaje_cot<-0.15
+
+for (edad_x in 20:113) {
+  i<-1
+  while(edad_x+i<=115) {
+    salarios_Edad_x[i,edad_x-19]<-as.numeric(esperanza_matrizEdad_x[i,1,edad_x-19]*sal_mean_h[i+edad_x]*mean_cot_h[edad_x]*12)
+    i<-i+1
+  }
+  cotizaciones_anual<-cotizaciones_anual+salarios_Edad_x[,edad_x-19]*porcentaje_cot
+  masa_anual<-masa_anual+salarios_Edad_x[,edad_x-19]
+}
+plot(masa_anual)
+plot(cotizaciones_anual)
+```
+
 
 ## 6.3 Grafico Proyeccion 2
 
@@ -649,6 +705,40 @@ ggplot(df_long, aes(x = Year, y = Value, color = State)) +
 ```
 
 
+```{r}
+df<-as.data.frame(unlist(v2_matriz_resumenEsperanza_H_9[,-5]))
+
+df$Año <- 2024:(2024 + nrow(df) - 1)
+
+colnames(df) <- c("Activos",  "Invalidez","Vejez", "Sucesión", "Año")
+df_long <- df %>%
+  pivot_longer(cols = -Año, names_to = "Estado", values_to = "Proyección")
+
+ggplot(df_long, aes(x = Año, y = Proyección, color = Estado)) +
+  geom_line(size = 1) +
+  scale_y_continuous(labels = scales::comma) +
+  scale_x_continuous(breaks = seq(2024, 2124, by = 10)) +
+  labs(
+    x = "Año",
+    y = "Proyección",
+    color = "Estado"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14),
+    axis.text = element_text(size = 10),
+    axis.title = element_text(size = 12),
+    panel.grid.major.x = element_blank(), # Remove vertical grid lines
+    panel.grid.minor.x = element_blank(), # Remove minor vertical grid lines
+    panel.grid.major.y = element_line(color = "gray", size = 0.5), # Keep horizontal grid lines
+    panel.grid.minor.y = element_line(color = "gray", size = 0.5),  # Keep minor horizontal grid lines
+    legend.position = "top", # Position the legend at the top
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  ) +
+  scale_color_manual(values = c("Activos" = "blue", "Vejez" = "orange", "Invalidez" = "green", "Sucesión" = "red"))
+
+```
 
 
 

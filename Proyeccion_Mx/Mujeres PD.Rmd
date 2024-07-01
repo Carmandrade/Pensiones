@@ -156,6 +156,8 @@ px[2, 2003-1906,20,7,]
 
 
 
+
+
 ## 3. Poblacion inicial para la proyeccion demografica
 Se omiten las pensiones por orfandad, es decir la proyeccion comienza para las personas activas de 20 años
 ```{r}
@@ -381,6 +383,7 @@ cot_f[,40]
 
 
 
+
 ## 5.1 Cotizaciones en los ultimos 2(X) o 4(Y) anos:
 ```{r}
 V <- den_cot_f*12
@@ -529,8 +532,52 @@ ggplot(df_long, aes(x = Year, y = Value, color = State)) +
        x = "Año",
        y = "Poblacion",
        color = "Estado") +
-  theme_minimal()
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14),
+    axis.text = element_text(size = 10),
+    axis.title = element_text(size = 12)
+  ) 
 ```
+
+```{r}
+df<-as.data.frame(unlist(matriz_resumenEsperanza_f_9[,-5]))
+
+df$Año <- 2024:(2024 + nrow(df) - 1)
+
+colnames(df) <- c("Activos",  "Invalidez","Vejez", "Sucesión", "Año")
+df_long <- df %>%
+  pivot_longer(cols = -Año, names_to = "Estado", values_to = "Proyección")
+
+ggplot(df_long, aes(x = Año, y = Proyección, color = Estado)) +
+  geom_line(size = 1) +
+  scale_y_continuous(labels = scales::comma) +
+  scale_x_continuous(breaks = seq(2024, 2124, by = 10)) +
+  labs(
+    x = "Año",
+    y = "Proyección",
+    color = "Estado"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14),
+    axis.text = element_text(size = 10),
+    axis.title = element_text(size = 12),
+    panel.grid.major.x = element_blank(), # Remove vertical grid lines
+    panel.grid.minor.x = element_blank(), # Remove minor vertical grid lines
+    panel.grid.major.y = element_line(color = "gray", size = 0.5), # Keep horizontal grid lines
+    panel.grid.minor.y = element_line(color = "gray", size = 0.5),  # Keep minor horizontal grid lines
+    legend.position = "top", # Position the legend at the top
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  ) +
+  scale_color_manual(values = c("Activos" = "blue", "Vejez" = "orange", "Invalidez" = "green", "Sucesión" = "red"))
+
+```
+
+
+
+
 
 
 ## 6.1 Creacion de matriz 2d para guardar Esperanda de P2
@@ -619,7 +666,7 @@ for (edad_x in 20:113) {
     
 
 }
-f_esperanza_matrizEdad_x[,,3]
+#f_esperanza_matrizEdad_x[,,3]
 ```
 
 ## 6.3 Grafico Proyeccion 2
@@ -640,6 +687,100 @@ ggplot(df_long, aes(x = Year, y = Value, color = State)) +
        y = "Poblacion",
        color = "Estado") +
   theme_minimal()
+```
+
+```{r}
+df<-as.data.frame(unlist(v2_matriz_resumenEsperanza_F_9[,-5]))
+
+df$Año <- 2024:(2024 + nrow(df) - 1)
+
+colnames(df) <- c("Activos",  "Invalidez","Vejez", "Sucesión", "Año")
+df_long <- df %>%
+  pivot_longer(cols = -Año, names_to = "Estado", values_to = "Proyección")
+
+ggplot(df_long, aes(x = Año, y = Proyección, color = Estado)) +
+  geom_line(size = 1) +
+  scale_y_continuous(labels = scales::comma) +
+  scale_x_continuous(breaks = seq(2024, 2124, by = 10)) +
+  labs(
+    x = "Año",
+    y = "Proyección",
+    color = "Estado"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14),
+    axis.text = element_text(size = 10),
+    axis.title = element_text(size = 12),
+    panel.grid.major.x = element_blank(), # Remove vertical grid lines
+    panel.grid.minor.x = element_blank(), # Remove minor vertical grid lines
+    panel.grid.major.y = element_line(color = "gray", size = 0.5), # Keep horizontal grid lines
+    panel.grid.minor.y = element_line(color = "gray", size = 0.5),  # Keep minor horizontal grid lines
+    legend.position = "top", # Position the legend at the top
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  ) +
+  scale_color_manual(values = c("Activos" = "blue", "Vejez" = "orange", "Invalidez" = "green", "Sucesión" = "red"))
+
+```
+## 7.3 Grafico Proyeccion Hombres y mujeres v2
+```{r}
+pd<-v2_matriz_resumenEsperanza_F_9+v2_matriz_resumenEsperanza_H_9
+df<-as.data.frame(unlist(pd[,-5]))
+colnames(df) <- c("activo", "invalidez",  "vejez","sucesion", "muerte")
+df$Year <- 1:nrow(df)
+
+# Convertir el data frame a formato largo (long format) para ggplot
+df_long <- df %>%
+  pivot_longer(cols = -Year, names_to = "State", values_to = "Value")
+
+# Crear el gráfico
+ggplot(df_long, aes(x = Year, y = Value, color = State)) +
+  geom_line() +
+  labs(title = "Comportamiento de los Estados a través del tiempo",
+       x = "Año",
+       y = "Poblacion",
+       color = "Estado") +
+  theme_minimal()
+```
+
+
+
+```{r}
+pd<-v2_matriz_resumenEsperanza_F_9+v2_matriz_resumenEsperanza_H_9
+df<-as.data.frame(unlist(pd[1:100,-5]))
+
+write.csv(df, "Proyeccion_Total.csv")
+df$Año <- 2024:(2024 + nrow(df) - 1)
+
+colnames(df) <- c("Activos",  "Invalidez","Vejez", "Sucesión", "Año")
+df_long <- df %>%
+  pivot_longer(cols = -Año, names_to = "Estado", values_to = "Proyección")
+
+ggplot(df_long, aes(x = Año, y = Proyección, color = Estado)) +
+  geom_line(size = 1.2) +
+  scale_y_continuous(labels = scales::comma) +
+  scale_x_continuous(breaks = seq(2024, 2124, by = 10)) +
+  labs(
+    x = "Año",
+    y = "Proyección",
+    color = "Estado", color="black"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14),
+    axis.text = element_text(size = 10),
+    axis.title = element_text(size = 12),
+    panel.grid.major.x = element_blank(), # Remove vertical grid lines
+    panel.grid.minor.x = element_blank(), # Remove minor vertical grid lines
+    panel.grid.major.y = element_line(color = "gray", size = 0.5), # Keep horizontal grid lines
+    panel.grid.minor.y = element_line(color = "gray", size = 0.5),  # Keep minor horizontal grid lines
+    legend.position = "top", # Position the legend at the top
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10, color = "black")
+  ) +
+  scale_color_manual(values = c("Activos" = "blue", "Vejez" = "orange", "Invalidez" = "green", "Sucesión" = "red"))
+
 ```
 
 ### Grafico densidad de cotizacion
@@ -707,23 +848,3 @@ print(plot)
 
 
 
-## 7.3 Grafico Proyeccion Hombres y mujeres v2
-```{r}
-pd<-v2_matriz_resumenEsperanza_F_9+v2_matriz_resumenEsperanza_H_9
-df<-as.data.frame(unlist(pd))
-colnames(df) <- c("activo", "invalidez",  "vejez","sucesion", "muerte")
-df$Year <- 1:nrow(df)
-
-# Convertir el data frame a formato largo (long format) para ggplot
-df_long <- df %>%
-  pivot_longer(cols = -Year, names_to = "State", values_to = "Value")
-
-# Crear el gráfico
-ggplot(df_long, aes(x = Year, y = Value, color = State)) +
-  geom_line() +
-  labs(title = "Comportamiento de los Estados a través del tiempo",
-       x = "Año",
-       y = "Poblacion",
-       color = "Estado") +
-  theme_minimal()
-```
