@@ -1,0 +1,65 @@
+---
+title: "Untitled"
+author: "C"
+date: "2024-07-01"
+output: html_document
+---
+```{r}
+calcular_reserva <- function(cotizaciones, gastos, tasa_rendimiento, reserva_inicial, año_inicial = 2024) {
+  # Verificar que los vectores de cotizaciones y gastos tengan la misma longitud
+  if (length(cotizaciones) != length(gastos)) {
+    stop("Los vectores de cotizaciones y gastos deben tener la misma longitud.")
+  }
+  
+  # Crear un data frame para almacenar los resultados
+  años <- length(cotizaciones)
+  resultados <- data.frame(matrix(ncol = años, nrow = 4))
+  
+  # Asignar nombres a las filas y columnas
+  colnames(resultados) <- año_inicial:(año_inicial + años - 1)
+  rownames(resultados) <- c("Gasto por Pensiones", "Cotizaciones", "Diferencia", "Reserva Final")
+  
+  # Inicializar la reserva con el valor inicial
+  reserva <- reserva_inicial
+  
+  # Calcular los valores año por año
+  for (i in 1:años) {
+    cotizacion <- cotizaciones[i]
+    gasto <- gastos[i]
+    
+    # Calcular la nueva reserva antes de aplicar la tasa de rendimiento
+    nueva_reserva <- reserva + cotizacion - gasto
+    
+    # Calcular la diferencia
+    diferencia <- reserva + cotizacion - gasto
+    
+    # Actualizar la reserva con la tasa de rendimiento
+    reserva <- nueva_reserva * (1 + tasa_rendimiento)
+    
+    # Guardar los valores en el data frame
+    resultados["Gasto por Pensiones", i] <- gasto
+    resultados["Cotizaciones", i] <- cotizacion
+    resultados["Diferencia", i] <- diferencia
+    resultados["Reserva Final", i] <- reserva
+  }
+  
+  return(resultados)
+}
+
+# Ejemplo de uso
+cotizaciones <- c(0, 120, 130, 140)
+gastos <- c(80, 90, 100, 110)
+tasa_rendimiento <- 0.05
+reserva_inicial <- 1000
+
+resultados <- calcular_reserva(cotizaciones, gastos, tasa_rendimiento, reserva_inicial)
+print(resultados)
+
+```
+
+
+# Para insertar datos 
+
+
+
+
